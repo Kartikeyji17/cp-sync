@@ -72,7 +72,7 @@
         button.className = activeClassName(target.className || "");
         button.removeAttribute("disabled");
         button.removeAttribute("aria-disabled");
-        button.addEventListener("click", () => startUpload(config));
+        button.addEventListener("click", () => startUpload(config, "", { force: true }));
         applyActiveButtonStyles(button, config.platform);
 
         target.insertAdjacentElement("afterend", button);
@@ -109,11 +109,19 @@
             const result = await sendMessage({
                 type: "UPLOAD_SOLUTION",
                 problem,
-                repository
+                repository,
+                force: options.force === true
             });
 
             if (!result?.success)
                 throw new Error(result?.error || "Upload failed.");
+
+            if (result.data?.skipped) {
+                showToast(result.data.reason || "Already uploaded", {
+                    tone: "success"
+                });
+                return;
+            }
 
             showToast(`Uploaded successfully \u2713 ${result.data.owner}/${result.data.repo}`, {
                 tone: "success"
@@ -211,6 +219,11 @@
             if (ACCEPTED_UPLOADS.has(key))
                 return;
 
+            if (mode === "auto" && !problem.code?.trim()) {
+                ACCEPTED_UPLOADS.add(key);
+                return;
+            }
+
             ACCEPTED_UPLOADS.add(key);
 
             if (mode === "ask") {
@@ -219,7 +232,7 @@
             }
 
             if (mode === "auto")
-                await startUpload(config, "", { interactive: false });
+                await startUpload(config, "", { interactive: false, force: false });
         }, 3000);
     }
 
@@ -238,7 +251,7 @@
 
         item.querySelector('[data-action="upload"]').addEventListener("click", () => {
             item.remove();
-            startUpload(config, "", { interactive: false });
+            startUpload(config, "", { interactive: false, force: true });
         });
 
         item.querySelector('[data-action="cancel"]').addEventListener("click", () => {

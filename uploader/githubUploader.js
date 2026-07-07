@@ -19,7 +19,7 @@ export async function uploadSolution(problem, options = {}) {
     if (!settings.token)
         throw new Error("GitHub Token Missing");
 
-    validateProblem(problem);
+    validateProblem(problem, options);
 
     const repositoryRef = options.repository || selectRepository(problem.platform, settings);
 
@@ -32,20 +32,19 @@ export async function uploadSolution(problem, options = {}) {
     await ensureRepository(github, owner, repo, settings, options);
 
     const pathInfo = buildUploadPaths(problem, settings);
+
+    if (!problem.code?.trim()) {
+        if (await isAlreadyStoredSolution(github, owner, repo, pathInfo.solutionPath, problem))
+            return buildSkippedUpload(owner, repo, pathInfo.solutionPath, repositoryRef, problem);
+
+        throw new Error("Could not extract solution code from the page.");
+    }
+
     const solutionContent = buildSolutionContent(problem);
     const duplicate = await isIdenticalFile(github, owner, repo, pathInfo.solutionPath, solutionContent);
 
-    if (duplicate) {
-        await rememberRepository(problem.platform, repositoryRef);
-
-        return {
-            owner,
-            repo,
-            path: pathInfo.solutionPath,
-            skipped: true,
-            reason: "Already uploaded"
-        };
-    }
+    if (duplicate)
+        return buildSkippedUpload(owner, repo, pathInfo.solutionPath, repositoryRef, problem);
 
     await github.createOrUpdateFile(
         owner,
@@ -133,6 +132,47 @@ async function isIdenticalFile(github, owner, repo, path, content) {
     }
 }
 
+async function isAlreadyStoredSolution(github, owner, repo, path, problem) {
+    if (await isInUploadHistory(problem))
+        return true;
+
+    return fileExists(github, owner, repo, path);
+}
+
+async function fileExists(github, owner, repo, path) {
+    try {
+        await github.getFileContent(owner, repo, path);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+
+async function isInUploadHistory(problem) {
+    const stored = await chrome.storage.local.get(["uploadHistory"]);
+    const history = Array.isArray(stored.uploadHistory) ? stored.uploadHistory : [];
+    const slug = problem.slug;
+    const labels = new Set([
+        platformLabel(problem.platform),
+        problem.platform
+    ]);
+
+    return history.some((item) => item.slug === slug && labels.has(item.platform));
+}
+
+async function buildSkippedUpload(owner, repo, path, repositoryRef, problem) {
+    await rememberRepository(problem.platform, repositoryRef);
+
+    return {
+        owner,
+        repo,
+        path,
+        skipped: true,
+        reason: "Already uploaded"
+    };
+}
+
 async function updateReadme(github, owner, repo, problem, pathInfo, notesPath) {
     const readmePath = "README.md";
     let existing = "";
@@ -184,7 +224,7 @@ async function rememberUpload(entry) {
     });
 }
 
-function validateProblem(problem) {
+function validateProblem(problem, options = {}) {
     if (!problem)
         throw new Error("No problem data found.");
 
@@ -194,11 +234,11 @@ function validateProblem(problem) {
     if (!problem.title || !problem.slug || !problem.url)
         throw new Error("Could not identify the current problem.");
 
-    if (!problem.code || !problem.code.trim())
-        throw new Error("Could not extract solution code from the page.");
-
     if (problem.accepted === false)
         throw new Error("The current page does not show an accepted solution yet.");
+
+    if (!problem.code?.trim() && options.force !== true)
+        throw new Error("Could not extract solution code from the page.");
 }
 
 function parseRepositoryRef(repositoryRef) {
@@ -211,11 +251,41 @@ function parseRepositoryRef(repositoryRef) {
 }
 
 function solutionCommitMessage(problem) {
-    return `${platformLabel(problem.platform)}: Solve ${problem.slug || problem.title}`;
+
+    const contest =
+        problem.contest &&
+        typeof problem.contest === "object" &&
+        problem.contest.isContest
+            ? problem.contest.name
+            : "";
+
+    if (contest) {
+
+        return `${platformLabel(problem.platform)}: ${contest} - ${problem.title}`;
+
+    }
+
+    return `${platformLabel(problem.platform)}: Solve ${problem.title}`;
+
 }
 
 function notesCommitMessage(problem) {
-    return `${platformLabel(problem.platform)}: Add notes for ${problem.slug || problem.title}`;
+
+    const contest =
+        problem.contest &&
+        typeof problem.contest === "object" &&
+        problem.contest.isContest
+            ? problem.contest.name
+            : "";
+
+    if (contest) {
+
+        return `${platformLabel(problem.platform)}: Notes for ${contest} - ${problem.title}`;
+
+    }
+
+    return `${platformLabel(problem.platform)}: Add notes for ${problem.title}`;
+
 }
 
 function platformLabel(platform) {

@@ -78,7 +78,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === "UPLOAD_SOLUTION") {
 
         uploadSolution(message.problem, {
-            repository: message.repository
+            repository: message.repository,
+            force: message.force === true
         })
             .then((result) => {
                 sendResponse({

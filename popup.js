@@ -119,7 +119,8 @@ function uploadParsedSolution(problem) {
         {
             type: "UPLOAD_SOLUTION",
             problem,
-            repository: repositorySelect.value
+            repository: repositorySelect.value,
+            force: true
         },
         (response) => {
             if (!response?.success) {
@@ -128,6 +129,12 @@ function uploadParsedSolution(problem) {
             }
 
             const result = response.data;
+
+            if (result.skipped) {
+                finish(result.reason || "Already uploaded");
+                return;
+            }
+
             finish(`Uploaded ${result.owner}/${result.repo}`);
             alert(`Uploaded to ${result.owner}/${result.repo}/${result.path}`);
         }

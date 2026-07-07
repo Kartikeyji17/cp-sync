@@ -1,8 +1,8 @@
-* {
+*{
     box-sizing: border-box;
 }
 
-body {
+body{
     max-width: 720px;
     margin: 0 auto;
     padding: 36px 20px;
@@ -28,7 +28,7 @@ h2 {
     letter-spacing: 0;
 }
 
-label {
+label{
     display: block;
     margin-top: 18px;
     font-size: 13px;
@@ -151,3 +151,93 @@ hr {
         grid-template-columns: minmax(160px, 1fr) repeat(3, 84px);
     }
 }
+
+/* ================= DASHBOARD ================= */
+
+#dashboard{
+    margin-top:10px;
+}
+
+.stats-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:16px;
+    margin-top:18px;
+}
+
+.card{
+    background:#fff;
+    border-radius:12px;
+    border:1px solid #dcdcdc;
+    padding:18px;
+    transition:.2s;
+    box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+
+.card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 8px 18px rgba(0,0,0,.08);
+}
+
+.card h3{
+    margin:0;
+    font-size:14px;
+    color:#666;
+    font-weight:600;
+}
+
+.card p{
+    margin-top:12px;
+    margin-bottom:0;
+    font-size:34px;
+    font-weight:700;
+    color:#2563eb;
+}
+
+canvas{
+    width:100%;
+    background:white;
+    border-radius:12px;
+    border:1px solid #ddd;
+    margin-top:12px;
+    padding:12px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+    border-radius:12px;
+    overflow:hidden;
+    border:1px solid #ddd;
+}
+
+thead{
+    background:#2563eb;
+    color:white;
+}
+
+th{
+    padding:12px;
+    text-align:left;
+}
+
+td{
+    padding:10px;
+    border-top:1px solid #eee;
+    font-size:14px;
+}
+
+tbody tr:hover{
+    background:#f7f9ff;
+}
+
+@media(max-width:700px){
+
+.stats-grid{
+grid-template-columns:1fr;
+}
+
+canvas{
+height:260px;
+}}

@@ -5,27 +5,201 @@ window.CPSyncParsers.CodeforcesParser = class CodeforcesParser {
     static parse() {
 
         const problemStatement = document.querySelector(".problem-statement");
+
         const titleNode = problemStatement?.querySelector(".title");
+
         const problemLink = findProblemLink();
-        const title = cleanTitle(titleNode?.textContent || problemLink?.textContent || document.title);
+
+        const title = cleanTitle(
+            titleNode?.textContent ||
+            problemLink?.textContent ||
+            document.title
+        );
+
         const slug = buildSlug(title);
+
         const bodyText = document.body.innerText;
 
+        const tags = detectTags();
+
         return {
+
             platform: "codeforces",
+
             title,
+
             slug,
+
             url: location.href,
-            contest: contestName(),
+
+            contest: detectContest(),
+
             difficulty: rating(),
+
             language: detectLanguage(),
+
             code: extractVisibleCode(),
-            accepted: detectAccepted(bodyText)
+
+            accepted: detectAccepted(bodyText),
+
+            tags,
+
+            topic: tags[0] || "General"
+
         };
 
     }
 
 };
+
+function detectContest() {
+
+    const text = document.body.innerText;
+
+    const patterns = [
+
+        /Codeforces Round\s+#?\d+/i,
+        /Educational Codeforces Round\s+\d+/i,
+        /Codeforces Global Round\s+\d+/i,
+        /Codeforces Round\s+\d+/i,
+        /CodeTON Round\s+\d+/i,
+        /Div\.\s*1/i,
+        /Div\.\s*2/i,
+        /Div\.\s*3/i,
+        /Div\.\s*4/i
+
+    ];
+
+    for (const pattern of patterns) {
+
+        const match = text.match(pattern);
+
+        if (match) {
+
+            return {
+
+                isContest: true,
+
+                name: match[0].trim(),
+
+                platform: "codeforces"
+
+            };
+
+        }
+
+    }
+
+    const id = contestId();
+
+    if (id) {
+
+        return {
+
+            isContest: true,
+
+            name: "Codeforces Round " + id,
+
+            platform: "codeforces"
+
+        };
+
+    }
+
+    return {
+
+        isContest: false,
+
+        name: "",
+
+        platform: "codeforces"
+
+    };
+
+}
+
+function detectTags() {
+
+    return Array.from(document.querySelectorAll(".tag-box"))
+        .map(node => node.textContent.trim())
+        .filter(tag => {
+
+            if (!tag)
+                return false;
+
+            if (/^\*\d+$/.test(tag))
+                return false;
+
+            return true;
+
+        })
+        .map(normalizeTag);
+
+}
+
+function normalizeTag(tag) {
+
+    const aliases = {
+
+        "data structures": "Data Structures",
+
+        "binary search": "Binary Search",
+
+        "dfs and similar": "DFS",
+
+        "graphs": "Graphs",
+
+        "graph": "Graphs",
+
+        "dp": "DP",
+
+        "dynamic programming": "DP",
+
+        "greedy": "Greedy",
+
+        "implementation": "Implementation",
+
+        "math": "Math",
+
+        "strings": "Strings",
+
+        "string": "Strings",
+
+        "trees": "Trees",
+
+        "tree": "Trees",
+
+        "constructive algorithms": "Constructive",
+
+        "bitmasks": "Bitmask",
+
+        "brute force": "Brute Force",
+
+        "number theory": "Number Theory"
+
+    };
+
+    const key = tag.toLowerCase();
+
+    if (aliases[key])
+        return aliases[key];
+
+    return tag
+        .split(" ")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+
+}
+
+function contestId() {
+
+    const match = location.pathname.match(
+        /contest\/(\d+)|problemset\/problem\/(\d+)/
+    );
+
+    return match?.[1] || match?.[2] || "";
+
+}
 
 function cleanTitle(value) {
 
@@ -38,33 +212,37 @@ function cleanTitle(value) {
 
 function buildSlug(title) {
 
-    const problemHref = findProblemLink()?.getAttribute("href") || location.pathname;
-    const match = problemHref.match(/contest\/(\d+)\/problem\/([A-Z0-9]+)|problemset\/problem\/(\d+)\/([A-Z0-9]+)/i);
-    const contestId = match?.[1] || match?.[3] || "";
+    const problemHref =
+        findProblemLink()?.getAttribute("href") ||
+        location.pathname;
+
+    const match = problemHref.match(
+        /contest\/(\d+)\/problem\/([A-Z0-9]+)|problemset\/problem\/(\d+)\/([A-Z0-9]+)/i
+    );
+
+    const contest = match?.[1] || match?.[3] || "";
+
     const index = match?.[2] || match?.[4] || "";
 
-    return [contestId, index, slugify(title)].filter(Boolean).join("-");
+    return [contest, index, slugify(title)]
+        .filter(Boolean)
+        .join("-");
 
 }
 
 function findProblemLink() {
 
-    return document.querySelector('a[href*="/problemset/problem/"], a[href*="/problem/"]');
-
-}
-
-function contestName() {
-
-    const match = location.pathname.match(/contest\/(\d+)|problemset\/problem\/(\d+)/);
-    return match?.[1] || match?.[2] || "";
+    return document.querySelector(
+        'a[href*="/problemset/problem/"], a[href*="/problem/"]'
+    );
 
 }
 
 function rating() {
 
     const tag = Array.from(document.querySelectorAll(".tag-box"))
-        .map((node) => node.textContent.trim())
-        .find((text) => /^\*\d+$/.test(text));
+        .map(node => node.textContent.trim())
+        .find(text => /^\*\d+$/.test(text));
 
     return tag || "";
 
@@ -73,7 +251,10 @@ function rating() {
 function detectLanguage() {
 
     const text = document.body.innerText;
-    const match = text.match(/GNU C\+\+\d+|PyPy \d+|Python \d+|Java \d+|Kotlin|C#|Go|Rust|JavaScript|Node\.js/i);
+
+    const match = text.match(
+        /GNU C\+\+\d+|PyPy \d+|Python \d+|Java \d+|Kotlin|C#|Go|Rust|JavaScript|Node\.js/i
+    );
 
     return match?.[0] || "";
 
@@ -81,14 +262,16 @@ function detectLanguage() {
 
 function extractVisibleCode() {
 
-    const source = document.querySelector("#sourceCodeTextarea, textarea[name='source'], textarea");
+    const source = document.querySelector(
+        "#sourceCodeTextarea, textarea[name='source'], textarea"
+    );
 
     if (source?.value?.trim())
         return source.value;
 
     return Array.from(document.querySelectorAll("pre.prettyprint, pre, code"))
-        .map((node) => node.textContent.trim())
-        .filter((text) => text.split("\n").length > 2)
+        .map(node => node.textContent.trim())
+        .filter(text => text.split("\n").length > 2)
         .sort((a, b) => b.length - a.length)[0] || "";
 
 }

@@ -12,6 +12,20 @@ const defaultSelects = {
     codechef: document.getElementById("codechefDefaultRepo")
 };
 
+const totalSolved=document.getElementById("totalSolved");
+const easySolved=document.getElementById("easySolved");
+const mediumSolved=document.getElementById("mediumSolved");
+const hardSolved=document.getElementById("hardSolved");
+const contestSolved=document.getElementById("contestSolved");
+const currentStreak=document.getElementById("currentStreak");
+const longestStreak=document.getElementById("longestStreak");
+
+const recentUploads=document.querySelector("#recentUploads tbody");
+
+const platformChart=document.getElementById("platformChart");
+const languageChart=document.getElementById("languageChart");
+const difficultyChart=document.getElementById("difficultyChart");
+
 let fetchedRepositories = [];
 let platformRepositories = normalizePlatformMap();
 let defaultRepositories = {};
@@ -89,6 +103,7 @@ async function loadSavedSettings() {
 
     renderRepositoryTable();
     renderDefaultSelectors();
+    renderDashboard();
 }
 
 function renderRepositoryTable() {
@@ -191,4 +206,189 @@ function normalizeUploadMode(value) {
         return value;
 
     return "manual";
+}
+
+async function renderDashboard(){
+
+    const data=await chrome.storage.local.get(["uploadHistory"]);
+
+    const history=data.uploadHistory||[];
+
+    totalSolved.textContent=history.length;
+
+    const diff={
+        Easy:0,
+        Medium:0,
+        Hard:0
+    };
+
+    const platform={};
+
+    const language={};
+
+    let contests=0;
+
+    history.forEach(item=>{
+
+        diff[item.difficulty]=(diff[item.difficulty]||0)+1;
+
+        platform[item.platform]=(platform[item.platform]||0)+1;
+
+        language[item.language]=(language[item.language]||0)+1;
+
+        if(item.contest)
+            contests++;
+
+    });
+
+    easySolved.textContent=diff.Easy||0;
+    mediumSolved.textContent=diff.Medium||0;
+    hardSolved.textContent=diff.Hard||0;
+
+    contestSolved.textContent=contests;
+
+    const streak=calculateStreak(history);
+
+    currentStreak.textContent=streak.current;
+    longestStreak.textContent=streak.longest;
+
+    drawBarChart(platformChart,platform);
+
+    drawBarChart(languageChart,language);
+
+    drawBarChart(difficultyChart,diff);
+
+    renderRecent(history);
+
+}
+
+function renderRecent(history){
+
+    recentUploads.innerHTML="";
+
+    history
+    .slice(0,15)
+    .forEach(item=>{
+
+        recentUploads.innerHTML+=`
+        <tr>
+
+        <td>${item.title}</td>
+
+        <td>${item.platform}</td>
+
+        <td>${item.language}</td>
+
+        <td>${item.difficulty}</td>
+
+        <td>${new Date(item.uploadedAt).toLocaleDateString()}</td>
+
+        </tr>
+        `;
+
+    });
+
+}
+
+function calculateStreak(history){
+
+    const days=[
+        ...new Set(
+            history.map(x=>
+                new Date(x.uploadedAt)
+                .toISOString()
+                .slice(0,10)
+            )
+        )
+    ].sort().reverse();
+
+    let current=0;
+
+    let longest=0;
+
+    let prev=null;
+
+    for(const day of days){
+
+        const d=new Date(day);
+
+        if(prev){
+
+            const diff=(prev-d)/86400000;
+
+            if(diff===1){
+
+                current++;
+
+            }
+
+            else{
+
+                longest=Math.max(longest,current);
+
+                current=1;
+
+            }
+
+        }
+
+        else{
+
+            current=1;
+
+        }
+
+        prev=d;
+
+    }
+
+    longest=Math.max(longest,current);
+
+    return{
+
+        current,
+
+        longest
+
+    };
+
+}
+
+function drawBarChart(canvas,data){
+
+    const ctx=canvas.getContext("2d");
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const entries=Object.entries(data);
+
+    if(!entries.length)
+        return;
+
+    const max=Math.max(...entries.map(x=>x[1]));
+
+    const width=60;
+
+    const gap=20;
+
+    entries.forEach(([label,value],i)=>{
+
+        const h=(value/max)*150;
+
+        const x=40+i*(width+gap);
+
+        const y=180-h;
+
+        ctx.fillStyle="#2563eb";
+
+        ctx.fillRect(x,y,width,h);
+
+        ctx.fillStyle="#111";
+
+        ctx.fillText(label,x,y+170);
+
+        ctx.fillText(value,x+20,y-5);
+
+    });
+
 }
