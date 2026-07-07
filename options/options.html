@@ -9,37 +9,50 @@
 
 <body>
 
-    <h1>CP Sync Settings</h1>
+    <main>
+        <h1>CP Sync Settings</h1>
 
-    <label for="token">GitHub Fine-grained Personal Access Token</label>
+        <section>
+            <label for="token">GitHub Fine-grained Personal Access Token</label>
+            <input id="token" type="password" placeholder="github_pat_...">
 
-    <input
-        id="token"
-        type="password"
-        placeholder="github_pat_..."
-    >
+            <button id="fetchRepos">Load Repositories</button>
+            <p id="repoStatus">Repositories have not been loaded in this session.</p>
+        </section>
 
-    <button id="fetchRepos">
-        Load Repositories
-    </button>
+        <section>
+            <h2>Platform Repositories</h2>
+            <div id="repositoryTable" class="repository-table"></div>
+        </section>
 
-    <hr>
+        <section class="defaults-grid">
+            <div>
+                <label for="leetcodeDefaultRepo">LeetCode Default</label>
+                <select id="leetcodeDefaultRepo"></select>
+            </div>
 
-    <label for="leetcodeRepo">LeetCode Repository</label>
+            <div>
+                <label for="codeforcesDefaultRepo">Codeforces Default</label>
+                <select id="codeforcesDefaultRepo"></select>
+            </div>
 
-    <select id="leetcodeRepo"></select>
+            <div>
+                <label for="codechefDefaultRepo">CodeChef Default</label>
+                <select id="codechefDefaultRepo"></select>
+            </div>
+        </section>
 
-    <label for="codeforcesRepo">Codeforces Repository</label>
+        <section>
+            <label for="autoUploadMode">Upload Mode</label>
+            <select id="autoUploadMode">
+                <option value="manual">Manual</option>
+                <option value="ask">Ask after Accepted</option>
+                <option value="auto">Auto Upload</option>
+            </select>
+        </section>
 
-    <select id="codeforcesRepo"></select>
-
-    <label for="codechefRepo">CodeChef Repository</label>
-
-    <select id="codechefRepo"></select>
-
-    <button id="save">
-        Save Settings
-    </button>
+        <button id="save">Save Settings</button>
+    </main>
 
     <script type="module" src="options.js"></script>
 

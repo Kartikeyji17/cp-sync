@@ -1,11 +1,28 @@
 import GitHubService from "../github/github.js";
+import { PLATFORM_LABELS, PLATFORMS } from "../utils/platform.js";
+import { getRepositorySettings, normalizePlatformMap, saveRepositorySettings } from "../utils/repositories.js";
 
 const tokenInput = document.getElementById("token");
-const leetcodeRepo = document.getElementById("leetcodeRepo");
-const codeforcesRepo = document.getElementById("codeforcesRepo");
-const codechefRepo = document.getElementById("codechefRepo");
+const repositoryTable = document.getElementById("repositoryTable");
+const repoStatus = document.getElementById("repoStatus");
+const autoUploadMode = document.getElementById("autoUploadMode");
+const defaultSelects = {
+    leetcode: document.getElementById("leetcodeDefaultRepo"),
+    codeforces: document.getElementById("codeforcesDefaultRepo"),
+    codechef: document.getElementById("codechefDefaultRepo")
+};
+
+let fetchedRepositories = [];
+let platformRepositories = normalizePlatformMap();
+let defaultRepositories = {};
 
 loadSavedSettings();
+
+Object.entries(defaultSelects).forEach(([platform, select]) => {
+    select.addEventListener("change", () => {
+        defaultRepositories[platform] = select.value;
+    });
+});
 
 document.getElementById("fetchRepos").addEventListener("click", async () => {
     try {
@@ -16,76 +33,162 @@ document.getElementById("fetchRepos").addEventListener("click", async () => {
             return;
         }
 
+        repoStatus.textContent = "Loading repositories...";
+
         const github = new GitHubService(token);
         const user = await github.getUser();
-        const repositories = await github.getRepositories();
-        const saved = await chrome.storage.local.get([
-            "leetcodeRepo",
-            "codeforcesRepo",
-            "codechefRepo"
-        ]);
+        fetchedRepositories = await github.getRepositories();
+        await chrome.storage.local.set({ fetchedRepositories });
 
-        fillDropdown(leetcodeRepo, repositories, saved.leetcodeRepo);
-        fillDropdown(codeforcesRepo, repositories, saved.codeforcesRepo);
-        fillDropdown(codechefRepo, repositories, saved.codechefRepo);
+        renderRepositoryTable();
+        renderDefaultSelectors();
 
-        alert(`Welcome ${user.login}. Loaded ${repositories.length} repositories.`);
+        repoStatus.textContent = `Loaded ${fetchedRepositories.length} repositories for ${user.login}.`;
     }
     catch (error) {
         console.error(error);
+        repoStatus.textContent = "Could not load repositories.";
         alert(error.message || "Invalid GitHub Token");
     }
 });
 
-document.getElementById("save").addEventListener("click", () => {
-    chrome.storage.local.set(
-        {
-            token: tokenInput.value.trim(),
-            leetcodeRepo: leetcodeRepo.value,
-            codeforcesRepo: codeforcesRepo.value,
-            codechefRepo: codechefRepo.value
-        },
-        () => {
-            alert("Settings saved successfully.");
-        }
-    );
+document.getElementById("save").addEventListener("click", async () => {
+    const nextPlatformRepositories = readPlatformRepositoryAssignments();
+    const nextDefaultRepositories = readDefaultRepositories(nextPlatformRepositories);
+    const current = await getRepositorySettings();
+
+    await chrome.storage.local.set({
+        token: tokenInput.value.trim(),
+        autoUploadMode: autoUploadMode.value
+    });
+
+    await saveRepositorySettings({
+        platformRepositories: nextPlatformRepositories,
+        defaultRepositories: nextDefaultRepositories,
+        lastUsedRepositories: current.lastUsedRepositories
+    });
+
+    platformRepositories = nextPlatformRepositories;
+    defaultRepositories = nextDefaultRepositories;
+    renderDefaultSelectors();
+
+    alert("Settings saved successfully.");
 });
 
 async function loadSavedSettings() {
-    const settings = await chrome.storage.local.get([
-        "token",
-        "leetcodeRepo",
-        "codeforcesRepo",
-        "codechefRepo"
+    const [settings, repositories] = await Promise.all([
+        chrome.storage.local.get(["token", "autoUploadMode", "fetchedRepositories"]),
+        getRepositorySettings()
     ]);
 
     tokenInput.value = settings.token || "";
-    addSavedOption(leetcodeRepo, settings.leetcodeRepo);
-    addSavedOption(codeforcesRepo, settings.codeforcesRepo);
-    addSavedOption(codechefRepo, settings.codechefRepo);
+    autoUploadMode.value = normalizeUploadMode(settings.autoUploadMode);
+    fetchedRepositories = Array.isArray(settings.fetchedRepositories) ? settings.fetchedRepositories : [];
+    platformRepositories = repositories.platformRepositories;
+    defaultRepositories = repositories.defaultRepositories;
+
+    renderRepositoryTable();
+    renderDefaultSelectors();
 }
 
-function fillDropdown(select, repositories, selectedValue = "") {
-    select.innerHTML = "";
+function renderRepositoryTable() {
+    const allRepositories = mergedRepositoryNames();
 
-    repositories.forEach((repository) => {
-        const option = document.createElement("option");
-        option.value = repository.full_name;
-        option.textContent = repository.full_name;
-        select.appendChild(option);
+    if (!allRepositories.length) {
+        repositoryTable.innerHTML = '<div class="empty-state">Load repositories, or save existing assignments to see them here.</div>';
+        return;
+    }
+
+    repositoryTable.innerHTML = `
+        <div class="table-row table-head">
+            <span>Repository</span>
+            ${PLATFORMS.map((platform) => `<span>${PLATFORM_LABELS[platform]}</span>`).join("")}
+        </div>
+        ${allRepositories.map((repository) => repositoryRow(repository)).join("")}
+    `;
+
+    repositoryTable.querySelectorAll("input[type='checkbox']").forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+            platformRepositories = readPlatformRepositoryAssignments();
+            renderDefaultSelectors();
+        });
+    });
+}
+
+function repositoryRow(repository) {
+    return `
+        <div class="table-row">
+            <span class="repo-name">${repository}</span>
+            ${PLATFORMS.map((platform) => `
+                <label class="check-cell" title="Assign ${repository} to ${PLATFORM_LABELS[platform]}">
+                    <input
+                        type="checkbox"
+                        data-platform="${platform}"
+                        data-repository="${repository}"
+                        ${platformRepositories[platform]?.includes(repository) ? "checked" : ""}
+                    >
+                </label>
+            `).join("")}
+        </div>
+    `;
+}
+
+function renderDefaultSelectors() {
+    PLATFORMS.forEach((platform) => {
+        const select = defaultSelects[platform];
+        const repositories = platformRepositories[platform] || [];
+        const selected = repositories.includes(defaultRepositories[platform])
+            ? defaultRepositories[platform]
+            : repositories[0] || "";
+
+        select.innerHTML = '<option value="">No repository selected</option>';
+
+        repositories.forEach((repository) => {
+            const option = document.createElement("option");
+            option.value = repository;
+            option.textContent = repository;
+            select.appendChild(option);
+        });
+
+        select.value = selected;
+        defaultRepositories[platform] = selected;
+    });
+}
+
+function readPlatformRepositoryAssignments() {
+    const assignments = normalizePlatformMap();
+
+    repositoryTable.querySelectorAll("input[type='checkbox']:checked").forEach((checkbox) => {
+        assignments[checkbox.dataset.platform].push(checkbox.dataset.repository);
     });
 
-    if (selectedValue)
-        select.value = selectedValue;
+    return assignments;
 }
 
-function addSavedOption(select, value) {
-    if (!value)
-        return;
+function readDefaultRepositories(assignments) {
+    return PLATFORMS.reduce((accumulator, platform) => {
+        const selected = defaultSelects[platform].value;
+        accumulator[platform] = assignments[platform].includes(selected)
+            ? selected
+            : assignments[platform][0] || "";
 
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = value;
-    select.appendChild(option);
-    select.value = value;
+        return accumulator;
+    }, {});
+}
+
+function mergedRepositoryNames() {
+    const names = new Set(fetchedRepositories.map((repository) => repository.full_name).filter(Boolean));
+
+    PLATFORMS.forEach((platform) => {
+        platformRepositories[platform].forEach((repository) => names.add(repository));
+    });
+
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeUploadMode(value) {
+    if (value === "ask" || value === "auto" || value === "manual")
+        return value;
+
+    return "manual";
 }

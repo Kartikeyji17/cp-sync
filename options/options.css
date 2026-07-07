@@ -11,9 +11,20 @@ body {
     color: #172026;
 }
 
+main {
+    display: grid;
+    gap: 24px;
+}
+
 h1 {
     margin: 0 0 28px;
     font-size: 28px;
+    letter-spacing: 0;
+}
+
+h2 {
+    margin: 0 0 12px;
+    font-size: 18px;
     letter-spacing: 0;
 }
 
@@ -60,4 +71,83 @@ hr {
     margin: 26px 0 4px;
     border: 0;
     border-top: 1px solid #d7d8d2;
+}
+
+#repoStatus {
+    margin: 10px 0 0;
+    color: #607078;
+    font-size: 13px;
+}
+
+.defaults-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.repository-table {
+    overflow: hidden;
+    border: 1px solid #d7d8d2;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.table-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) repeat(3, 110px);
+    min-height: 42px;
+    border-top: 1px solid #ecede8;
+}
+
+.table-row:first-child {
+    border-top: 0;
+}
+
+.table-row > span,
+.check-cell {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+}
+
+.table-head {
+    background: #eef0eb;
+    color: #33515f;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.repo-name {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.check-cell {
+    justify-content: center;
+    border-left: 1px solid #ecede8;
+}
+
+.check-cell input {
+    width: 18px;
+    min-height: 18px;
+    margin: 0;
+}
+
+.empty-state {
+    padding: 18px;
+    color: #607078;
+}
+
+@media (max-width: 760px) {
+    .defaults-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .table-row {
+        grid-template-columns: minmax(160px, 1fr) repeat(3, 84px);
+    }
 }

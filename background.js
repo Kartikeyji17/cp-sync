@@ -1,4 +1,6 @@
 import { uploadSolution } from "./uploader/githubUploader.js";
+import { detectPlatformFromUrl } from "./utils/platform.js";
+import { getRepositoriesForPlatform } from "./utils/repositories.js";
 
 chrome.runtime.onInstalled.addListener(() => {
     console.log("CP Sync Loaded");
@@ -75,11 +77,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.type === "UPLOAD_SOLUTION") {
 
-        uploadSolution(message.problem)
+        uploadSolution(message.problem, {
+            repository: message.repository
+        })
             .then((result) => {
                 sendResponse({
                     success: true,
                     data: result
+                });
+            })
+            .catch((error) => {
+                sendResponse({
+                    success: false,
+                    error: error.message
+                });
+            });
+
+        return true;
+    }
+
+    if (message.type === "GET_PLATFORM_REPOSITORIES") {
+
+        const platform = message.platform || detectPlatformFromUrl(message.url || sender.tab?.url || "");
+
+        getRepositoriesForPlatform(platform)
+            .then((result) => {
+                sendResponse({
+                    success: true,
+                    data: {
+                        platform,
+                        ...result
+                    }
                 });
             })
             .catch((error) => {

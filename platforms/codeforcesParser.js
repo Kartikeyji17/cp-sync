@@ -95,7 +95,12 @@ function extractVisibleCode() {
 
 function detectAccepted(text) {
 
-    if (/\bAccepted\b|\bOK\b/.test(text))
+    const isSubmissionPage = /\/submission\//.test(location.pathname);
+
+    if (/\bAccepted\b/.test(text))
+        return true;
+
+    if (isSubmissionPage && /\bOK\b/.test(text))
         return true;
 
     if (/\bWrong answer\b|\bCompilation error\b|\bRuntime error\b|\bTime limit exceeded\b/i.test(text))

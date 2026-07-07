@@ -46,6 +46,7 @@
       ],
       "js": [
         "platforms/leetcodeParser.js",
+        "content/cpSyncContent.js",
         "content/leetcode.js"
       ]
     },
@@ -59,6 +60,7 @@
       ],
       "js": [
         "platforms/codeforcesParser.js",
+        "content/cpSyncContent.js",
         "content/codeforces.js"
       ]
     },
@@ -71,6 +73,7 @@
       ],
       "js": [
         "platforms/codechefParser.js",
+        "content/cpSyncContent.js",
         "content/codechef.js"
       ]
     }

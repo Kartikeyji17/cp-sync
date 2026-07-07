@@ -1,12 +1,19 @@
 import GitHubService from "../github/github.js";
+import { buildReadmeDashboard, entryKey, parseReadmeEntries } from "../utils/readmeDashboard.js";
+import { rememberRepository } from "../utils/repositories.js";
+import { buildNotesContent, buildSolutionContent, buildUploadPaths } from "../utils/uploadPaths.js";
 
-export async function uploadSolution(problem) {
-
+export async function uploadSolution(problem, options = {}) {
     const settings = await chrome.storage.local.get([
         "token",
+        "platformRepositories",
+        "defaultRepositories",
+        "lastUsedRepositories",
         "leetcodeRepo",
         "codeforcesRepo",
-        "codechefRepo"
+        "codechefRepo",
+        "organizeBy",
+        "repoVisibility"
     ]);
 
     if (!settings.token)
@@ -14,37 +21,169 @@ export async function uploadSolution(problem) {
 
     validateProblem(problem);
 
-    const repositoryKey = `${problem.platform}Repo`;
-    const repositoryRef = settings[repositoryKey];
+    const repositoryRef = options.repository || selectRepository(problem.platform, settings);
 
     if (!repositoryRef)
         throw new Error(`Select a GitHub repository for ${platformLabel(problem.platform)} first.`);
 
     const { owner, repo } = parseRepositoryRef(repositoryRef);
     const github = new GitHubService(settings.token);
-    const solutionPath = buildSolutionPath(problem);
+
+    await ensureRepository(github, owner, repo, settings, options);
+
+    const pathInfo = buildUploadPaths(problem, settings);
     const solutionContent = buildSolutionContent(problem);
+    const duplicate = await isIdenticalFile(github, owner, repo, pathInfo.solutionPath, solutionContent);
+
+    if (duplicate) {
+        await rememberRepository(problem.platform, repositoryRef);
+
+        return {
+            owner,
+            repo,
+            path: pathInfo.solutionPath,
+            skipped: true,
+            reason: "Already uploaded"
+        };
+    }
 
     await github.createOrUpdateFile(
         owner,
         repo,
-        solutionPath,
+        pathInfo.solutionPath,
         solutionContent,
-        `Sync ${problem.platform}: ${problem.title}`
+        solutionCommitMessage(problem)
     );
 
-    await updateReadme(github, owner, repo, problem, solutionPath);
+    let notesPath = "";
+
+    if (problem.notes?.trim()) {
+        notesPath = pathInfo.notesPath;
+
+        await github.createOrUpdateFile(
+            owner,
+            repo,
+            notesPath,
+            buildNotesContent(problem, pathInfo.solutionPath),
+            notesCommitMessage(problem)
+        );
+    }
+
+    await updateReadme(github, owner, repo, problem, pathInfo, notesPath);
+    await rememberRepository(problem.platform, repositoryRef);
+    await rememberUpload({
+        ...problem,
+        platform: platformLabel(problem.platform),
+        path: pathInfo.solutionPath,
+        notesPath,
+        topic: pathInfo.topic,
+        contest: pathInfo.contest,
+        uploadedAt: new Date().toISOString()
+    });
 
     return {
         owner,
         repo,
-        path: solutionPath
+        path: pathInfo.solutionPath,
+        notesPath,
+        skipped: false
     };
+}
 
+function selectRepository(platform, settings) {
+    const platformRepositories = settings.platformRepositories?.[platform] || [];
+    const lastUsed = settings.lastUsedRepositories?.[platform];
+    const defaultRepository = settings.defaultRepositories?.[platform];
+    const legacyRepository = settings[`${platform}Repo`];
+
+    if (lastUsed && platformRepositories.includes(lastUsed))
+        return lastUsed;
+
+    if (defaultRepository && platformRepositories.includes(defaultRepository))
+        return defaultRepository;
+
+    if (platformRepositories.length)
+        return platformRepositories[0];
+
+    return legacyRepository || "";
+}
+
+async function ensureRepository(github, owner, repo, settings, options) {
+    try {
+        await github.request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`);
+    }
+    catch (error) {
+        if (!/not found/i.test(error.message) || options.createRepository === false)
+            throw error;
+
+        await github.createRepository(repo, {
+            private: settings.repoVisibility !== "public"
+        });
+    }
+}
+
+async function isIdenticalFile(github, owner, repo, path, content) {
+    try {
+        const existing = await github.getFileContent(owner, repo, path);
+
+        return existing.content.trim() === content.trim();
+    }
+    catch {
+        return false;
+    }
+}
+
+async function updateReadme(github, owner, repo, problem, pathInfo, notesPath) {
+    const readmePath = "README.md";
+    let existing = "";
+
+    try {
+        existing = (await github.getFileContent(owner, repo, readmePath)).content;
+    }
+    catch {
+        existing = "";
+    }
+
+    const entries = parseReadmeEntries(existing);
+    const nextEntry = {
+        platform: platformLabel(problem.platform),
+        title: problem.title,
+        slug: problem.slug,
+        difficulty: problem.difficulty || "",
+        language: problem.language || "",
+        topic: pathInfo.topic || "",
+        contest: pathInfo.contest || "",
+        url: problem.url,
+        path: pathInfo.solutionPath,
+        notesPath
+    };
+    const merged = new Map(entries.map((entry) => [entryKey(entry), entry]));
+
+    merged.set(entryKey(nextEntry), nextEntry);
+
+    await github.createOrUpdateFile(
+        owner,
+        repo,
+        readmePath,
+        buildReadmeDashboard(Array.from(merged.values())),
+        "README: Update statistics"
+    );
+}
+
+async function rememberUpload(entry) {
+    const stored = await chrome.storage.local.get(["uploadHistory"]);
+    const history = Array.isArray(stored.uploadHistory) ? stored.uploadHistory : [];
+    const key = `${entry.platform}:${entry.slug}`;
+    const filtered = history.filter((item) => `${item.platform}:${item.slug}` !== key);
+
+    filtered.unshift(entry);
+
+    await chrome.storage.local.set({
+        uploadHistory: filtered.slice(0, 500)
+    });
 }
 
 function validateProblem(problem) {
-
     if (!problem)
         throw new Error("No problem data found.");
 
@@ -59,223 +198,29 @@ function validateProblem(problem) {
 
     if (problem.accepted === false)
         throw new Error("The current page does not show an accepted solution yet.");
-
 }
 
 function parseRepositoryRef(repositoryRef) {
-
     const [owner, repo] = repositoryRef.split("/");
 
     if (!owner || !repo)
         throw new Error("Saved repository setting is invalid. Reload repositories in options.");
 
     return { owner, repo };
-
 }
 
-function buildSolutionPath(problem) {
-
-    const fileName = `${sanitizePathPart(problem.slug)}.${extensionFor(problem.language)}`;
-
-    return [
-        platformLabel(problem.platform),
-        fileName
-    ].join("/");
-
+function solutionCommitMessage(problem) {
+    return `${platformLabel(problem.platform)}: Solve ${problem.slug || problem.title}`;
 }
 
-function buildSolutionContent(problem) {
-
-    const header = [
-        `// Title: ${problem.title}`,
-        `// Platform: ${platformLabel(problem.platform)}`,
-        `// URL: ${problem.url}`,
-        `// Language: ${problem.language || "Unknown"}`,
-        ""
-    ].join("\n");
-
-    return `${header}${problem.code.trim()}\n`;
-
-}
-
-async function updateReadme(github, owner, repo, problem, solutionPath) {
-
-    const readmePath = "README.md";
-    let existing = "";
-
-    try {
-        const file = await github.getFile(owner, repo, readmePath);
-        existing = decodeBase64(file.content || "");
-    }
-    catch {
-        existing = "";
-    }
-
-    const next = upsertReadmeEntry(existing, problem, solutionPath);
-
-    await github.createOrUpdateFile(
-        owner,
-        repo,
-        readmePath,
-        next,
-        `Update README for ${problem.title}`
-    );
-
-}
-
-function upsertReadmeEntry(existing, problem, solutionPath) {
-
-    const startMarker = "<!-- CP_SYNC_TABLE_START -->";
-    const endMarker = "<!-- CP_SYNC_TABLE_END -->";
-    const title = existing.trim()
-        ? existing.trim()
-        : "# Competitive Programming Solutions";
-
-    const outside = title.includes(startMarker)
-        ? `${title.slice(0, title.indexOf(startMarker)).trim()}\n\n`
-        : `${title}\n\n`;
-
-    const rows = parseExistingRows(existing, startMarker, endMarker);
-    const key = `${problem.platform}:${problem.slug}`;
-
-    rows.set(key, {
-        platform: platformLabel(problem.platform),
-        title: problem.title,
-        difficulty: problem.difficulty || "",
-        language: problem.language || "",
-        url: problem.url,
-        path: solutionPath
-    });
-
-    const tableRows = Array.from(rows.values())
-        .sort((a, b) => `${a.platform} ${a.title}`.localeCompare(`${b.platform} ${b.title}`))
-        .map((row) => `| ${row.platform} | [${escapeCell(row.title)}](${row.url}) | ${escapeCell(row.difficulty || "-")} | ${escapeCell(row.language || "-")} | [Solution](${encodeURI(row.path)}) |`);
-
-    return `${outside}${startMarker}
-| Platform | Problem | Difficulty | Language | Solution |
-| --- | --- | --- | --- | --- |
-${tableRows.join("\n")}
-${endMarker}
-`;
-
-}
-
-function parseExistingRows(existing, startMarker, endMarker) {
-
-    const rows = new Map();
-    const start = existing.indexOf(startMarker);
-    const end = existing.indexOf(endMarker);
-
-    if (start === -1 || end === -1 || end <= start)
-        return rows;
-
-    const table = existing.slice(start + startMarker.length, end);
-
-    table
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line.startsWith("|") && !line.includes("---"))
-        .forEach((line) => {
-            const cells = line
-                .split("|")
-                .slice(1, -1)
-                .map((cell) => cell.trim());
-
-            if (cells.length < 5 || cells[0] === "Platform")
-                return;
-
-            const url = extractMarkdownUrl(cells[1]);
-            const path = extractMarkdownUrl(cells[4]);
-            const slug = path
-                .split("/")
-                .pop()
-                ?.replace(/\.[^.]+$/, "") || cells[1];
-            const platform = cells[0].toLowerCase();
-
-            rows.set(`${platform}:${slug}`, {
-                platform: cells[0],
-                title: extractMarkdownText(cells[1]),
-                difficulty: cells[2] === "-" ? "" : cells[2],
-                language: cells[3] === "-" ? "" : cells[3],
-                url,
-                path
-            });
-        });
-
-    return rows;
-
-}
-
-function extensionFor(language = "") {
-
-    const normalized = language.toLowerCase();
-
-    if (normalized.includes("python")) return "py";
-    if (normalized.includes("javascript")) return "js";
-    if (normalized.includes("typescript")) return "ts";
-    if (normalized.includes("java")) return "java";
-    if (normalized.includes("c++") || normalized.includes("cpp") || normalized.includes("gnu")) return "cpp";
-    if (normalized === "c" || normalized.includes("clang")) return "c";
-    if (normalized.includes("c#")) return "cs";
-    if (normalized.includes("go")) return "go";
-    if (normalized.includes("rust")) return "rs";
-    if (normalized.includes("kotlin")) return "kt";
-    if (normalized.includes("swift")) return "swift";
-    if (normalized.includes("ruby")) return "rb";
-    if (normalized.includes("php")) return "php";
-
-    return "txt";
-
+function notesCommitMessage(problem) {
+    return `${platformLabel(problem.platform)}: Add notes for ${problem.slug || problem.title}`;
 }
 
 function platformLabel(platform) {
-
     return {
         leetcode: "LeetCode",
         codeforces: "Codeforces",
         codechef: "CodeChef"
     }[platform] || platform;
-
-}
-
-function sanitizePathPart(value) {
-
-    return String(value || "solution")
-        .trim()
-        .replace(/[<>:"\\|?*\u0000-\u001F]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^\.+|\.+$/g, "")
-        .slice(0, 120) || "solution";
-
-}
-
-function decodeBase64(content) {
-
-    const cleaned = content.replace(/\s/g, "");
-    const binary = atob(cleaned);
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-
-    return new TextDecoder().decode(bytes);
-
-}
-
-function extractMarkdownUrl(value) {
-
-    const match = value.match(/\]\(([^)]+)\)/);
-    return match ? match[1] : value;
-
-}
-
-function extractMarkdownText(value) {
-
-    const match = value.match(/\[([^\]]+)\]/);
-    return match ? match[1] : value;
-
-}
-
-function escapeCell(value) {
-
-    return String(value).replace(/\|/g, "\\|");
-
 }

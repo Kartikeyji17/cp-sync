@@ -98,11 +98,42 @@ export default class GitHubService {
 
     }
 
+    async createRepository(name, options = {}) {
+
+        return await this.request(
+            "/user/repos",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    name,
+                    private: options.private !== false,
+                    auto_init: true,
+                    description: options.description || "Competitive programming solutions synced by CP Sync"
+                })
+            }
+        );
+
+    }
+
     async getFile(owner, repo, path) {
 
         return await this.request(
-            `/repos/${owner}/${repo}/contents/${path}`
+            `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${encodePath(path)}`
         );
+
+    }
+
+    async getFileContent(owner, repo, path) {
+
+        const file = await this.getFile(owner, repo, path);
+
+        return {
+            sha: file.sha,
+            content: decodeBase64(file.content || "")
+        };
 
     }
 
@@ -178,5 +209,15 @@ function encodeBase64(value) {
     });
 
     return btoa(binary);
+
+}
+
+function decodeBase64(content) {
+
+    const cleaned = content.replace(/\s/g, "");
+    const binary = atob(cleaned);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+
+    return new TextDecoder().decode(bytes);
 
 }

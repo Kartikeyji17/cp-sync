@@ -14,21 +14,20 @@ function inject() {
 
 inject();
 
+window.CPSyncContent.initPlatform({
+    platform: "leetcode",
+    parse: parseLeetCode,
+    findSubmitButton: findSubmitButton
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.type !== "LEETCODE_PARSE")
         return;
 
-    getEditorData()
+    parseLeetCode()
         .then((editorData) => {
-            const parser = window.CPSyncParsers?.LeetCodeParser;
-
-            if (!parser) {
-                sendResponse({ error: "LeetCode parser was not loaded." });
-                return;
-            }
-
-            sendResponse(parser.parse(editorData));
+            sendResponse(editorData);
         })
         .catch((error) => {
             sendResponse({
@@ -39,6 +38,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
 
 });
+
+async function parseLeetCode() {
+    const parser = window.CPSyncParsers?.LeetCodeParser;
+
+    if (!parser)
+        return { error: "LeetCode parser was not loaded." };
+
+    const editorData = await getEditorData();
+
+    return parser.parse(editorData);
+}
+
+function findSubmitButton() {
+    return Array.from(document.querySelectorAll("button"))
+        .find((button) => button.textContent.trim() === "Submit");
+}
 
 function getEditorData() {
 
