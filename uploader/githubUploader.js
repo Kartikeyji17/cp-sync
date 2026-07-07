@@ -1,5 +1,5 @@
 import GitHubService from "../github/github.js";
-import { buildReadmeDashboard, entryKey, parseReadmeEntries } from "../utils/readmeDashboard.js";
+import { entryKey, mergeReadmeDashboard, parseReadmeEntries } from "../utils/readmeDashboard.js";
 import { rememberRepository } from "../utils/repositories.js";
 import { buildNotesContent, buildSolutionContent, buildUploadPaths } from "../utils/uploadPaths.js";
 
@@ -155,7 +155,8 @@ async function updateReadme(github, owner, repo, problem, pathInfo, notesPath) {
         contest: pathInfo.contest || "",
         url: problem.url,
         path: pathInfo.solutionPath,
-        notesPath
+        notesPath,
+        uploadedAt: new Date().toISOString()
     };
     const merged = new Map(entries.map((entry) => [entryKey(entry), entry]));
 
@@ -165,7 +166,7 @@ async function updateReadme(github, owner, repo, problem, pathInfo, notesPath) {
         owner,
         repo,
         readmePath,
-        buildReadmeDashboard(Array.from(merged.values())),
+        mergeReadmeDashboard(existing, Array.from(merged.values())),
         "README: Update statistics"
     );
 }
