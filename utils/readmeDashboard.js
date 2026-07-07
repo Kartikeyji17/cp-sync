@@ -1,16 +1,15 @@
+const DASHBOARD_START = "<!-- CP_SYNC_DASHBOARD_START -->";
+const DASHBOARD_END = "<!-- CP_SYNC_DASHBOARD_END -->";
+const TABLE_START = "<!-- CP_SYNC_TABLE_START -->";
+const TABLE_END = "<!-- CP_SYNC_TABLE_END -->";
+
 export function buildReadmeDashboard(entries, generatedAt = new Date()) {
     const normalized = normalizeEntries(entries);
     const stats = buildStats(normalized);
-    const languageRows = Object.entries(stats.languages)
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .map(([language, count]) => `| ${escapeCell(language)} | ${count} |`)
-        .join("\n") || "| - | 0 |";
-    const platformRows = Object.entries(stats.platforms)
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .map(([platform, count]) => `| ${escapeCell(platform)} | ${count} |`)
-        .join("\n") || "| - | 0 |";
+    const languageRows = renderCountRows(stats.languages);
+    const platformRows = renderCountRows(stats.platforms);
     const problemRows = normalized
-        .sort((a, b) => `${a.platform} ${a.title}`.localeCompare(`${b.platform} ${b.title}`))
+        .sort(compareEntries)
         .map((entry) => [
             escapeCell(entry.platform),
             `[${escapeCell(entry.title)}](${entry.url})`,
@@ -24,26 +23,25 @@ export function buildReadmeDashboard(entries, generatedAt = new Date()) {
         .map((row) => `| ${row} |`)
         .join("\n") || "| - | - | - | - | - | - | - | - |";
 
-    return `# CP Sync
+    return `# CP Sync Dashboard
 
-## Statistics
+Auto-generated summary of competitive programming solutions synced by CP Sync.
 
-| Metric | Count |
-| --- | ---: |
-| Total Solved | ${stats.total} |
-| Easy | ${stats.easy} |
-| Medium | ${stats.medium} |
-| Hard | ${stats.hard} |
+## Overview
+
+| Total Solved | Easy | Medium | Hard |
+| ---: | ---: | ---: | ---: |
+| ${stats.total} | ${stats.easy} | ${stats.medium} | ${stats.hard} |
 
 ## Languages
 
-| Language | Count |
+| Language | Problems |
 | --- | ---: |
 ${languageRows}
 
-## Platform
+## Platforms
 
-| Platform | Count |
+| Platform | Problems |
 | --- | ---: |
 ${platformRows}
 
@@ -53,25 +51,42 @@ ${formatTimestamp(generatedAt)}
 
 ## Uploaded Problems
 
-<!-- CP_SYNC_TABLE_START -->
+${TABLE_START}
 | Platform | Problem | Difficulty | Language | Topic | Contest | Solution | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 ${problemRows}
-<!-- CP_SYNC_TABLE_END -->
+${TABLE_END}
 `;
 }
 
+export function mergeReadmeDashboard(existingReadme = "", entries, generatedAt = new Date()) {
+    const dashboard = wrapDashboard(buildReadmeDashboard(entries, generatedAt));
+    const start = existingReadme.indexOf(DASHBOARD_START);
+    const end = existingReadme.indexOf(DASHBOARD_END);
+
+    if (start !== -1 && end !== -1 && end > start)
+        return `${existingReadme.slice(0, start)}${dashboard}${existingReadme.slice(end + DASHBOARD_END.length)}`;
+
+    const trimmed = existingReadme.trim();
+
+    if (!trimmed)
+        return dashboard;
+
+    if (isLegacyCpSyncReadme(trimmed))
+        return dashboard;
+
+    return `${trimmed}\n\n${dashboard}\n`;
+}
+
 export function parseReadmeEntries(readme = "") {
-    const startMarker = "<!-- CP_SYNC_TABLE_START -->";
-    const endMarker = "<!-- CP_SYNC_TABLE_END -->";
-    const start = readme.indexOf(startMarker);
-    const end = readme.indexOf(endMarker);
+    const start = readme.indexOf(TABLE_START);
+    const end = readme.indexOf(TABLE_END);
 
     if (start === -1 || end === -1 || end <= start)
         return [];
 
     return readme
-        .slice(start + startMarker.length, end)
+        .slice(start + TABLE_START.length, end)
         .split("\n")
         .map((line) => line.trim())
         .filter((line) => line.startsWith("|") && !line.includes("---"))
@@ -103,7 +118,7 @@ function buildStats(entries) {
         if (difficulty === "medium") stats.medium += 1;
         if (difficulty === "hard") stats.hard += 1;
 
-        increment(stats.languages, entry.language || "Unknown");
+        increment(stats.languages, normalizeLanguage(entry.language));
         increment(stats.platforms, entry.platform || "Unknown");
 
         return stats;
@@ -129,16 +144,107 @@ function normalizeEntries(entries) {
             title: entry.title,
             slug: entry.slug || slugFromPath(entry.path),
             difficulty: entry.difficulty || "",
-            language: entry.language || "",
+            language: normalizeLanguage(entry.language),
             topic: entry.topic || "",
             contest: entry.contest || "",
             url: entry.url || "",
             path: entry.path,
-            notesPath: entry.notesPath || ""
+            notesPath: entry.notesPath || "",
+            uploadedAt: entry.uploadedAt || ""
         });
     });
 
     return Array.from(byKey.values());
+}
+
+function renderCountRows(values) {
+    return Object.entries(values)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([label, count]) => `| ${escapeCell(label)} | ${count} |`)
+        .join("\n") || "| - | 0 |";
+}
+
+function compareEntries(a, b) {
+    const platformCompare = a.platform.localeCompare(b.platform);
+
+    if (platformCompare !== 0)
+        return platformCompare;
+
+    const difficultyCompare = difficultyRank(a.difficulty) - difficultyRank(b.difficulty);
+
+    if (difficultyCompare !== 0)
+        return difficultyCompare;
+
+    return a.title.localeCompare(b.title);
+}
+
+function difficultyRank(value) {
+    const difficulty = String(value || "").toLowerCase();
+
+    if (difficulty === "easy") return 0;
+    if (difficulty === "medium") return 1;
+    if (difficulty === "hard") return 2;
+
+    return 99;
+}
+
+function normalizeLanguage(language = "") {
+    const value = String(language || "").trim();
+
+    if (!value)
+        return "Unknown";
+
+    const lower = value.toLowerCase();
+
+    if (lower.includes("python") || lower.includes("pypy"))
+        return "Python";
+
+    if (lower.includes("c++") || lower.includes("cpp") || lower.includes("gnu"))
+        return "C++";
+
+    if (lower === "c" || lower.includes("clang"))
+        return "C";
+
+    if (lower.includes("javascript") || lower.includes("node"))
+        return "JavaScript";
+
+    if (lower.includes("typescript"))
+        return "TypeScript";
+
+    if (lower.includes("java"))
+        return "Java";
+
+    if (lower.includes("kotlin"))
+        return "Kotlin";
+
+    if (lower.includes("c#"))
+        return "C#";
+
+    if (lower.includes("go"))
+        return "Go";
+
+    if (lower.includes("rust"))
+        return "Rust";
+
+    if (lower.includes("swift"))
+        return "Swift";
+
+    if (lower.includes("ruby"))
+        return "Ruby";
+
+    if (lower.includes("php"))
+        return "PHP";
+
+    return value;
+}
+
+function wrapDashboard(content) {
+    return `${DASHBOARD_START}\n${content.trimEnd()}\n${DASHBOARD_END}\n`;
+}
+
+function isLegacyCpSyncReadme(readme) {
+    return (readme.startsWith("# CP Sync") || readme.startsWith("# CP Sync Dashboard"))
+        && readme.includes(TABLE_START);
 }
 
 function splitMarkdownRow(line) {
