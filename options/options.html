@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>CP Sync Settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+
+<body>
+
+    <h1>CP Sync Settings</h1>
+
+    <label for="token">GitHub Fine-grained Personal Access Token</label>
+
+    <input
+        id="token"
+        type="password"
+        placeholder="github_pat_..."
+    >
+
+    <button id="fetchRepos">
+        Load Repositories
+    </button>
+
+    <hr>
+
+    <label for="leetcodeRepo">LeetCode Repository</label>
+
+    <select id="leetcodeRepo"></select>
+
+    <label for="codeforcesRepo">Codeforces Repository</label>
+
+    <select id="codeforcesRepo"></select>
+
+    <label for="codechefRepo">CodeChef Repository</label>
+
+    <select id="codechefRepo"></select>
+
+    <button id="save">
+        Save Settings
+    </button>
+
+    <script type="module" src="options.js"></script>
+
+</body>
+
+</html>
