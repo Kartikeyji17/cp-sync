@@ -2,238 +2,286 @@
 <html>
 
 <head>
+
     <meta charset="UTF-8">
+
     <title>CP Sync Settings</title>
+
     <link rel="stylesheet" href="options.css">
+
 </head>
 
 <body>
 
-<main>
+<div class="app">
 
-    <h1>CP Sync Settings</h1>
+    <aside class="sidebar">
 
-    <!-- ================= SETTINGS ================= -->
+        <h1>CP Sync</h1>
 
-    <section>
-        <label for="token">GitHub Fine-grained Personal Access Token</label>
+        <nav>
 
-        <input
-            id="token"
-            type="password"
-            placeholder="github_pat_..."
-        >
+            <button class="nav-btn active" data-page="settings">
+                ⚙ Settings
+            </button>
 
-        <button id="fetchRepos">
-            Load Repositories
+            <button class="nav-btn" data-page="dashboard">
+                📊 Dashboard
+            </button>
+
+            <button class="nav-btn" data-page="analytics">
+                📈 Analytics
+            </button>
+
+            <button class="nav-btn" data-page="history">
+                🕘 Recent Uploads
+            </button>
+
+        </nav>
+
+        <button id="save" class="save-btn">
+            Save Settings
         </button>
 
-        <p id="repoStatus">
-            Repositories have not been loaded in this session.
-        </p>
-    </section>
+    </aside>
 
-    <section>
+    <main class="content">
 
-        <h2>Platform Repositories</h2>
+        <!-- ================= SETTINGS ================= -->
 
-        <div
-            id="repositoryTable"
-            class="repository-table"
-        ></div>
-
-    </section>
-
-    <section class="defaults-grid">
-
-        <div>
-
-            <label for="leetcodeDefaultRepo">
-                LeetCode Default
-            </label>
-
-            <select id="leetcodeDefaultRepo"></select>
-
-        </div>
-
-        <div>
-
-            <label for="codeforcesDefaultRepo">
-                Codeforces Default
-            </label>
-
-            <select id="codeforcesDefaultRepo"></select>
-
-        </div>
-
-        <div>
-
-            <label for="codechefDefaultRepo">
-                CodeChef Default
-            </label>
-
-            <select id="codechefDefaultRepo"></select>
-
-        </div>
-
-    </section>
-
-    <section>
-
-        <label for="autoUploadMode">
-            Upload Mode
-        </label>
-
-        <select id="autoUploadMode">
-
-            <option value="manual">
-                Manual
-            </option>
-
-            <option value="ask">
-                Ask after Accepted
-            </option>
-
-            <option value="auto">
-                Auto Upload
-            </option>
-
-        </select>
-
-    </section>
-
-    <button id="save">
-        Save Settings
-    </button>
-
-    <hr>
-
-    <!-- ================= DASHBOARD ================= -->
-
-    <section id="dashboard">
-
-        <h2>
-            Dashboard
-        </h2>
-
-        <div class="stats-grid">
+        <section id="settings" class="page active">
 
             <div class="card">
-                <h3>Total Solved</h3>
-                <p id="totalSolved">0</p>
+
+                <h2>GitHub</h2>
+
+                <label for="token">
+                    GitHub Fine-grained Personal Access Token
+                </label>
+
+                <input
+                        id="token"
+                        type="password"
+                        placeholder="github_pat_..."
+                >
+
+                <button id="fetchRepos">
+                    Load Repositories
+                </button>
+
+                <p id="repoStatus">
+                    Repositories have not been loaded in this session.
+                </p>
+
             </div>
 
             <div class="card">
-                <h3>Easy</h3>
-                <p id="easySolved">0</p>
+
+                <h2>Platform Repositories</h2>
+
+                <div
+                        id="repositoryTable"
+                        class="repository-table"
+                ></div>
+
             </div>
 
             <div class="card">
-                <h3>Medium</h3>
-                <p id="mediumSolved">0</p>
+
+                <h2>Default Repository</h2>
+
+                <div class="defaults-grid">
+
+                    <div>
+
+                        <label for="leetcodeDefaultRepo">
+                            LeetCode
+                        </label>
+
+                        <select id="leetcodeDefaultRepo"></select>
+
+                    </div>
+
+                    <div>
+
+                        <label for="codeforcesDefaultRepo">
+                            Codeforces
+                        </label>
+
+                        <select id="codeforcesDefaultRepo"></select>
+
+                    </div>
+
+                    <div>
+
+                        <label for="codechefDefaultRepo">
+                            CodeChef
+                        </label>
+
+                        <select id="codechefDefaultRepo"></select>
+
+                    </div>
+
+                </div>
+
             </div>
 
             <div class="card">
-                <h3>Hard</h3>
-                <p id="hardSolved">0</p>
+
+                <h2>Upload</h2>
+
+                <label for="autoUploadMode">
+                    Upload Mode
+                </label>
+
+                <select id="autoUploadMode">
+
+                    <option value="manual">
+                        Manual
+                    </option>
+
+                    <option value="ask">
+                        Ask after Accepted
+                    </option>
+
+                    <option value="auto">
+                        Auto Upload
+                    </option>
+
+                </select>
+
+            </div>
+
+        </section>
+
+        <!-- ================= DASHBOARD ================= -->
+
+        <section id="dashboard" class="page">
+
+            <h2>Dashboard</h2>
+
+            <div class="stats-grid">
+
+                <div class="card">
+                    <h3>Total Solved</h3>
+                    <p id="totalSolved">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Easy</h3>
+                    <p id="easySolved">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Medium</h3>
+                    <p id="mediumSolved">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Hard</h3>
+                    <p id="hardSolved">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Contest</h3>
+                    <p id="contestSolved">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Current Streak</h3>
+                    <p id="currentStreak">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Longest Streak</h3>
+                    <p id="longestStreak">0</p>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ================= ANALYTICS ================= -->
+
+        <section id="analytics" class="page">
+
+            <div class="card">
+
+                <h2>Platform Usage</h2>
+
+                <canvas
+                        id="platformChart"
+                        width="700"
+                        height="250"
+                ></canvas>
+
             </div>
 
             <div class="card">
-                <h3>Contest</h3>
-                <p id="contestSolved">0</p>
+
+                <h2>Language Usage</h2>
+
+                <canvas
+                        id="languageChart"
+                        width="700"
+                        height="250"
+                ></canvas>
+
             </div>
 
             <div class="card">
-                <h3>Current Streak</h3>
-                <p id="currentStreak">0</p>
+
+                <h2>Difficulty Distribution</h2>
+
+                <canvas
+                        id="difficultyChart"
+                        width="700"
+                        height="250"
+                ></canvas>
+
             </div>
+
+        </section>
+
+        <!-- ================= HISTORY ================= -->
+
+        <section id="history" class="page">
 
             <div class="card">
-                <h3>Longest Streak</h3>
-                <p id="longestStreak">0</p>
+
+                <h2>Recent Uploads</h2>
+
+                <table id="recentUploads">
+
+                    <thead>
+
+                    <tr>
+
+                        <th>Problem</th>
+
+                        <th>Platform</th>
+
+                        <th>Language</th>
+
+                        <th>Difficulty</th>
+
+                        <th>Date</th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody></tbody>
+
+                </table>
+
             </div>
 
-        </div>
+        </section>
 
-    </section>
+    </main>
 
-    <section>
-
-        <h2>
-            Platform Usage
-        </h2>
-
-        <canvas
-            id="platformChart"
-            width="500"
-            height="250"
-        ></canvas>
-
-    </section>
-
-    <section>
-
-        <h2>
-            Language Usage
-        </h2>
-
-        <canvas
-            id="languageChart"
-            width="500"
-            height="250"
-        ></canvas>
-
-    </section>
-
-    <section>
-
-        <h2>
-            Difficulty Distribution
-        </h2>
-
-        <canvas
-            id="difficultyChart"
-            width="500"
-            height="250"
-        ></canvas>
-
-    </section>
-
-    <section>
-
-        <h2>
-            Recent Uploads
-        </h2>
-
-        <table id="recentUploads">
-
-            <thead>
-
-            <tr>
-
-                <th>Problem</th>
-
-                <th>Platform</th>
-
-                <th>Language</th>
-
-                <th>Difficulty</th>
-
-                <th>Date</th>
-
-            </tr>
-
-            </thead>
-
-            <tbody>
-
-            </tbody>
-
-        </table>
-
-    </section>
-
-</main>
+</div>
 
 <script type="module" src="options.js"></script>
 

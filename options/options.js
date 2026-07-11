@@ -392,3 +392,32 @@ function drawBarChart(canvas,data){
     });
 
 }
+
+/* ===========================
+   Sidebar Navigation
+=========================== */
+
+const pages = document.querySelectorAll(".page");
+const navButtons = document.querySelectorAll(".nav-btn");
+
+navButtons.forEach(button => {
+
+    button.addEventListener("click", () => {
+
+        navButtons.forEach(btn =>
+            btn.classList.remove("active")
+        );
+
+        pages.forEach(page =>
+            page.classList.remove("active")
+        );
+
+        button.classList.add("active");
+
+        document
+            .getElementById(button.dataset.page)
+            .classList.add("active");
+
+    });
+
+});
