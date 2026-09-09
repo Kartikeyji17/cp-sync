@@ -72,6 +72,18 @@ Solution: [${solutionPath}](${encodeURI(solutionPath)})
 ## Notes
 
 ${problem.notes?.trim() || "No notes added."}
+
+## Approach
+
+${problem.approach?.trim() || "Not recorded."}
+
+## Complexity
+
+${problem.complexity?.trim() || "Not recorded."}
+
+## Editorial
+
+${problem.editorialUrl?.trim() || "Not recorded."}
 `;
 }
 

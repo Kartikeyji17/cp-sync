@@ -25,6 +25,13 @@ window.CPSyncParsers.CodeforcesParser = class CodeforcesParser {
         return {
 
             platform: "codeforces",
+            parserVersion: 1,
+            captureSource: location.pathname.includes("/submission/") ? "submission-page" : "problem-page",
+            externalId: slug,
+            submissionId: location.pathname.match(/\/submission\/(\d+)/)?.[1] || "",
+            runtime: submissionMetadata().runtime,
+            memory: submissionMetadata().memory,
+            submittedAt: "",
 
             title,
 
@@ -116,6 +123,14 @@ function detectContest() {
 
     };
 
+}
+
+function submissionMetadata() {
+    const text = document.body.innerText;
+    const runtime = text.match(/(?:time taken|time used|runtime)\s*:?\s*([\d.]+\s*(?:ms|s))/i)?.[1] || "";
+    const memory = text.match(/(?:memory used|memory)\s*:?\s*([\d.]+\s*(?:KB|MB|GB))/i)?.[1] || "";
+
+    return { runtime, memory };
 }
 
 function detectTags() {

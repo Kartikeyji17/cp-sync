@@ -28,6 +28,13 @@ window.CPSyncParsers.LeetCodeParser = class LeetCodeParser {
         return {
 
             platform: "leetcode",
+            parserVersion: 1,
+            captureSource: editorData.code ? "page-editor" : "dom-fallback",
+            externalId: slug,
+            submissionId: "",
+            runtime: "",
+            memory: "",
+            submittedAt: "",
 
             title,
 
@@ -186,11 +193,11 @@ function detectLanguage() {
     const languages = [
 
         "C++",
-        "Java",
         "Python3",
         "Python",
         "JavaScript",
         "TypeScript",
+        "Java",
         "C",
         "C#",
         "Go",

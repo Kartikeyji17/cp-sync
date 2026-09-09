@@ -6,67 +6,53 @@ export default class GitHubService {
     }
 
     async request(endpoint, options = {}) {
-
-        const response = await fetch(
-            this.baseUrl + endpoint,
-            {
-                ...options,
-
-                headers: {
-                    "Authorization": `Bearer ${this.token}`,
-                    "Accept": "application/vnd.github+json",
-                    "X-GitHub-Api-Version": "2022-11-28",
-                    ...(options.headers || {})
-                }
-            }
-        );
-
-        if (!response.ok) {
-
-            let errorMessage = `GitHub Error ${response.status}`;
-
-            try {
-                const err = await response.json();
-                errorMessage = err.message || errorMessage;
-            } catch {}
-
-            throw new Error(errorMessage);
-        }
-
-        return await response.json();
+        return this.requestWithRetry(endpoint, options);
     }
 
     async requestMaybeEmpty(endpoint, options = {}) {
+        return this.requestWithRetry(endpoint, options, true);
+    }
 
-        const response = await fetch(
-            this.baseUrl + endpoint,
-            {
-                ...options,
-                headers: {
-                    "Authorization": `Bearer ${this.token}`,
-                    "Accept": "application/vnd.github+json",
-                    "X-GitHub-Api-Version": "2022-11-28",
-                    ...(options.headers || {})
-                }
-            }
-        );
+    async requestWithRetry(endpoint, options = {}, allowEmpty = false) {
+        const maxAttempts = 3;
 
-        if (!response.ok) {
-
-            let errorMessage = `GitHub Error ${response.status}`;
-
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
             try {
-                const err = await response.json();
-                errorMessage = err.message || errorMessage;
-            } catch {}
+                const response = await fetch(
+                    this.baseUrl + endpoint,
+                    {
+                        ...options,
+                        headers: {
+                            "Authorization": `Bearer ${this.token}`,
+                            "Accept": "application/vnd.github+json",
+                            "X-GitHub-Api-Version": "2022-11-28",
+                            ...(options.headers || {})
+                        }
+                    }
+                );
 
-            throw new Error(errorMessage);
+                if (!response.ok) {
+                    const error = await buildGitHubError(response);
+
+                    if (!isRetryableStatus(error.status) || attempt === maxAttempts - 1)
+                        throw error;
+
+                    await delay(retryDelay(error, attempt));
+                    continue;
+                }
+
+                if (allowEmpty && response.status === 204)
+                    return null;
+
+                return await response.json();
+            }
+            catch (error) {
+                if (error.status || attempt === maxAttempts - 1)
+                    throw error;
+
+                await delay(retryDelay(error, attempt));
+            }
         }
-
-        if (response.status === 204)
-            return null;
-
-        return await response.json();
     }
 
     async getUser() {
@@ -153,7 +139,10 @@ export default class GitHubService {
             sha = existing.sha;
 
         }
-        catch {
+        catch (error) {
+
+            if (error.status !== 404)
+                throw error;
 
             sha = null;
 
@@ -170,24 +159,59 @@ export default class GitHubService {
         if (sha)
             body.sha = sha;
 
-        return await this.requestMaybeEmpty(
+        try {
+            return await this.requestMaybeEmpty(
+                `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${encodePath(path)}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                }
+            );
+        }
+        catch (error) {
+            if (error.status === 409)
+                error.conflict = { owner, repo, path, expectedSha: sha };
 
-            `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${encodePath(path)}`,
-
-            {
-                method: "PUT",
-
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
-                body: JSON.stringify(body)
-            }
-
-        );
+            throw error;
+        }
 
     }
 
+}
+
+async function buildGitHubError(response) {
+    let errorMessage = `GitHub Error ${response.status}`;
+
+    try {
+        const err = await response.json();
+        errorMessage = err.message || errorMessage;
+    }
+    catch {}
+
+    const error = new Error(errorMessage);
+    error.status = response.status;
+    error.retryAfter = response.headers?.get("retry-after") || "";
+    return error;
+}
+
+function isRetryableStatus(status) {
+    return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+function retryDelay(error, attempt) {
+    const retryAfterSeconds = Number(error.retryAfter);
+
+    if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0)
+        return Math.min(retryAfterSeconds * 1000, 30000);
+
+    return Math.min(250 * (2 ** attempt), 30000);
+}
+
+function delay(milliseconds) {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 function encodePath(path) {

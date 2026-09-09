@@ -96,6 +96,25 @@ select:focus{
 
 }
 
+.capture-editor{
+    margin-top:16px;
+}
+
+.capture-editor textarea{
+    width:100%;
+    resize:vertical;
+    padding:10px;
+    border:1px solid #d7d7d7;
+    border-radius:8px;
+    font:12px/1.5 Consolas,monospace;
+}
+
+#confirmCapture{
+    width:100%;
+    background:#16a34a;
+    color:white;
+}
+
 .buttons{
 
     margin-top:18px;

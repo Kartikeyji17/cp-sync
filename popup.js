@@ -1,9 +1,22 @@
 import { detectPlatformFromUrl, PARSE_MESSAGE_TYPES, platformLabel } from "./utils/platform.js";
+import { recordAttempt } from "./utils/attempts.js";
 
 const status = document.getElementById("status");
 const uploadButton = document.getElementById("upload");
 const repositorySelect = document.getElementById("repository");
 const repositoryLabel = document.getElementById("repositoryLabel");
+const statusBadge = document.getElementById("statusBadge");
+const captureEditor = document.getElementById("captureEditor");
+const captureTitle = document.getElementById("captureTitle");
+const captureLanguage = document.getElementById("captureLanguage");
+const captureCode = document.getElementById("captureCode");
+const captureNotes = document.getElementById("captureNotes");
+const captureApproach = document.getElementById("captureApproach");
+const captureComplexity = document.getElementById("captureComplexity");
+const captureEditorialUrl = document.getElementById("captureEditorialUrl");
+const confirmCapture = document.getElementById("confirmCapture");
+
+let pendingProblem = null;
 
 let activeTab = null;
 let activePlatform = "";
@@ -29,7 +42,7 @@ uploadButton.addEventListener("click", () => {
             tabId: activeTab.id,
             payload: { type: PARSE_MESSAGE_TYPES[activePlatform] }
         },
-        (response) => {
+        async (response) => {
             if (!response?.success) {
                 finish(response?.error || "Could not read this page.");
                 return;
@@ -40,13 +53,59 @@ uploadButton.addEventListener("click", () => {
                 return;
             }
 
-            uploadParsedSolution(response.data);
+            if (response.data?.accepted === false)
+                await recordAttempt(response.data);
+
+            pendingProblem = response.data;
+            openCaptureEditor(pendingProblem);
+            const diagnostics = captureDiagnostics(pendingProblem);
+
+            const blockingMissing = diagnostics.missing.filter((field) =>
+                ["title", "slug", "url", "code"].includes(field)
+            );
+
+            if (blockingMissing.length) {
+                finish(`Capture incomplete: missing ${diagnostics.missing.join(", ")}.`);
+                return;
+            }
+
+            return;
         }
     );
 });
 
+confirmCapture.addEventListener("click", () => {
+    if (!pendingProblem)
+        return;
+
+    const problem = {
+        ...pendingProblem,
+        title: captureTitle.value.trim(),
+        language: captureLanguage.value.trim(),
+        code: captureCode.value,
+        notes: captureNotes.value,
+        approach: captureApproach.value,
+        complexity: captureComplexity.value.trim(),
+        editorialUrl: captureEditorialUrl.value.trim()
+    };
+    const diagnostics = captureDiagnostics(problem);
+    const blockingMissing = diagnostics.missing.filter((field) =>
+        ["title", "slug", "url", "code"].includes(field)
+    );
+
+    if (blockingMissing.length) {
+        setStatus(`Capture incomplete: missing ${blockingMissing.join(", ")}.`);
+        return;
+    }
+
+    pendingProblem = problem;
+    captureEditor.hidden = true;
+    uploadParsedSolution(problem);
+});
+
 async function init() {
     const settings = await chrome.storage.local.get(["token"]);
+    setConnectionStatus(Boolean(settings.token));
     setStatus(settings.token ? "GitHub Connected" : "GitHub Not Connected");
 
     chrome.runtime.sendMessage({ type: "GET_ACTIVE_TAB" }, (tab) => {
@@ -143,6 +202,38 @@ function uploadParsedSolution(problem) {
 
 function setStatus(text) {
     status.textContent = text;
+}
+
+function openCaptureEditor(problem) {
+    captureTitle.value = problem.title || "";
+    captureLanguage.value = problem.language || "";
+    captureCode.value = problem.code || "";
+    captureNotes.value = problem.notes || "";
+    captureApproach.value = problem.approach || "";
+    captureComplexity.value = problem.complexity || "";
+    captureEditorialUrl.value = problem.editorialUrl || "";
+    captureEditor.hidden = false;
+    setStatus("Review the captured solution before uploading.");
+}
+
+function captureDiagnostics(problem) {
+    const missing = [];
+
+    ["title", "slug", "url", "language", "code"].forEach((field) => {
+        if (!problem?.[field] || (field === "code" && !problem[field].trim()))
+            missing.push(field);
+    });
+
+    return {
+        missing,
+        confidence: Math.max(0, 1 - missing.length / 5)
+    };
+}
+
+function setConnectionStatus(connected) {
+    statusBadge.textContent = connected ? "Connected" : "Not Connected";
+    statusBadge.classList.toggle("connected", connected);
+    statusBadge.classList.toggle("disconnected", !connected);
 }
 
 function finish(message) {

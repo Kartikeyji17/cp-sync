@@ -24,6 +24,15 @@ window.CPSyncParsers.CodeChefParser = class CodeChefParser {
         return {
 
             platform: "codechef",
+            parserVersion: 1,
+            captureSource: location.pathname.includes("/submit/") || location.pathname.includes("/viewsolution/")
+                ? "submission-page"
+                : "problem-page",
+            externalId: slug,
+            submissionId: location.pathname.match(/\/(?:submit|viewsolution)\/([^/]+)/i)?.[1] || "",
+            runtime: submissionMetadata().runtime,
+            memory: submissionMetadata().memory,
+            submittedAt: "",
 
             title,
 
@@ -97,6 +106,14 @@ function detectContest(text) {
 
     };
 
+}
+
+function submissionMetadata() {
+    const text = document.body.innerText;
+    const runtime = text.match(/(?:time taken|time used|runtime)\s*:?\s*([\d.]+\s*(?:ms|s))/i)?.[1] || "";
+    const memory = text.match(/(?:memory used|memory)\s*:?\s*([\d.]+\s*(?:KB|MB|GB))/i)?.[1] || "";
+
+    return { runtime, memory };
 }
 
 function detectTags(text) {
@@ -213,7 +230,7 @@ function cleanTitle(value) {
 
 function detectDifficulty(text) {
 
-    const match = text.match(/Difficulty\s*:?\s*([A-Za-z0-9* ]+)/i);
+    const match = text.match(/Difficulty\s*:?\s*(Easy|Medium|Hard|\d+(?:\.\d+)?|\*+\d+)/i);
 
     return match?.[1]?.trim() || "";
 

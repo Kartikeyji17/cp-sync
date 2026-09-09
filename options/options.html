@@ -73,6 +73,14 @@
                     Repositories have not been loaded in this session.
                 </p>
 
+                <div class="backup-actions">
+                    <button id="exportBackup" type="button">Export Backup</button>
+                    <button id="importBackup" type="button">Import Backup</button>
+                    <input id="backupFile" type="file" accept="application/json,.json" hidden>
+                </div>
+
+                <button id="clearLocalData" class="danger-button" type="button">Clear Local Data</button>
+
             </div>
 
             <div class="card">
@@ -150,6 +158,36 @@
 
                 </select>
 
+                <label for="organizeBy">
+                    Organize Solutions By
+                </label>
+
+                <select id="organizeBy">
+                    <option value="platform">Platform</option>
+                    <option value="difficulty">Difficulty</option>
+                    <option value="topic">Topic</option>
+                    <option value="platform-difficulty">Platform and difficulty</option>
+                    <option value="platform-topic">Platform and topic</option>
+                    <option value="platform-topic-difficulty">Platform, topic, and difficulty</option>
+                </select>
+
+                <label for="repoVisibility">
+                    New Repository Visibility
+                </label>
+
+                <select id="repoVisibility">
+                    <option value="private">Private</option>
+                    <option value="public">Public</option>
+                </select>
+
+            </div>
+
+            <div class="card">
+
+                <h2>Platform Capture</h2>
+
+                <div id="platformCapabilities" class="capability-list"></div>
+
             </div>
 
         </section>
@@ -188,6 +226,11 @@
                 </div>
 
                 <div class="card">
+                    <h3>Failed Attempts</h3>
+                    <p id="failedAttempts">0</p>
+                </div>
+
+                <div class="card">
                     <h3>Current Streak</h3>
                     <p id="currentStreak">0</p>
                 </div>
@@ -197,6 +240,21 @@
                     <p id="longestStreak">0</p>
                 </div>
 
+            </div>
+
+            <div class="card review-card">
+                <h2>Review Queue</h2>
+                <div id="reviewQueue" class="review-queue"></div>
+            </div>
+
+            <div class="card">
+                <h2>Weak Topics</h2>
+                <div id="weakTopics" class="weak-topics"></div>
+            </div>
+
+            <div class="card">
+                <h2>Redo Queue</h2>
+                <div id="redoQueue" class="redo-queue"></div>
             </div>
 
         </section>
@@ -251,6 +309,8 @@
 
                 <h2>Recent Uploads</h2>
 
+                <input id="historySearch" type="search" placeholder="Search uploaded problems">
+
                 <table id="recentUploads">
 
                     <thead>
@@ -266,6 +326,76 @@
                         <th>Difficulty</th>
 
                         <th>Date</th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody></tbody>
+
+                </table>
+
+            </div>
+
+            <div class="card">
+
+                <h2>Failed Attempts</h2>
+
+                <table id="attemptHistory">
+                    <thead>
+                    <tr>
+                        <th>Problem</th>
+                        <th>Platform</th>
+                        <th>Language</th>
+                        <th>Captured</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+            </div>
+
+            <div class="card">
+
+                <h2>Upload Jobs</h2>
+
+                <div class="job-filters">
+
+                    <input id="jobSearch" type="search" placeholder="Search problems or repositories">
+
+                    <select id="jobStateFilter">
+                        <option value="all">All statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="uploading">Uploading</option>
+                        <option value="retrying">Retrying</option>
+                        <option value="succeeded">Succeeded</option>
+                        <option value="skipped">Skipped</option>
+                        <option value="conflict">Conflict</option>
+                        <option value="failed">Failed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+
+                </div>
+
+                <table id="uploadJobs">
+
+                    <thead>
+
+                    <tr>
+
+                        <th>Problem</th>
+
+                        <th>Repository</th>
+
+                        <th>Status</th>
+
+                        <th>Attempts</th>
+
+                        <th>Commits</th>
+
+                        <th>Updated</th>
+
+                        <th>Action</th>
 
                     </tr>
 
