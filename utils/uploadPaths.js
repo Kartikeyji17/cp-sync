@@ -72,40 +72,133 @@ Solution: [${solutionPath}](${encodeURI(solutionPath)})
 ## Notes
 
 ${problem.notes?.trim() || "No notes added."}
+
+## Approach
+
+${problem.approach?.trim() || "Not recorded."}
+
+## Complexity
+
+${problem.complexity?.trim() || "Not recorded."}
+
+## Editorial
+
+${problem.editorialUrl?.trim() || "Not recorded."}
 `;
 }
 
 export function detectContestName(problem) {
-    const raw = problem.contest || "";
 
-    if (raw)
-        return raw;
+    // New parser format
+    if (
+        problem.contest &&
+        typeof problem.contest === "object"
+    ) {
 
-    const text = `${problem.title || ""} ${problem.url || ""}`;
+        if (
+            problem.contest.isContest &&
+            problem.contest.name
+        ) {
+
+            return normalizeContestName(
+                problem.contest.name
+            );
+
+        }
+
+    }
+
+    // Old parser format (backward compatible)
+    if (
+        typeof problem.contest === "string" &&
+        problem.contest.trim()
+    ) {
+
+        return normalizeContestName(
+            problem.contest
+        );
+
+    }
+
+    // Fallback detection from URL/title
+    const text =
+        `${problem.title || ""} ${problem.url || ""}`;
+
     const patterns = [
+
         /weekly-contest-(\d+)/i,
+
         /biweekly-contest-(\d+)/i,
+
         /Codeforces Round #[\d()A-Za-z -]+/i,
+
         /Educational Codeforces Round [\d()A-Za-z -]+/i,
-        /Starters\s*\d+/i
+
+        /Codeforces Global Round [\d()A-Za-z -]+/i,
+
+        /CodeTON Round [\d()A-Za-z -]+/i,
+
+        /Starters\s*\d+/i,
+
+        /Cook[- ]?Off/i,
+
+        /Lunchtime/i,
+
+        /Long Challenge/i
+
     ];
 
     for (const pattern of patterns) {
+
         const match = text.match(pattern);
 
         if (match)
             return normalizeContestName(match[0]);
+
     }
 
     return "";
+
 }
 
 export function primaryTopic(problem) {
-    const tags = Array.isArray(problem.tags)
-        ? problem.tags
-        : String(problem.tags || "").split(",");
 
-    return normalizeTopic(tags.find(Boolean) || "");
+    // Highest priority: parser already detected a topic
+    if (
+        problem.topic &&
+        String(problem.topic).trim()
+    ) {
+
+        return normalizeTopic(problem.topic);
+
+    }
+
+    // Second priority: tags array
+    if (Array.isArray(problem.tags)) {
+
+        const first = problem.tags.find(tag => String(tag).trim());
+
+        if (first)
+            return normalizeTopic(first);
+
+    }
+
+    // Third priority: comma-separated tags
+    if (typeof problem.tags === "string") {
+
+        const first = problem.tags
+            .split(",")
+            .map(tag => tag.trim())
+            .find(Boolean);
+
+        if (first)
+            return normalizeTopic(first);
+
+    }
+
+    // Last fallback
+    return "General";
+
 }
 
 export function sanitizePathPart(value) {

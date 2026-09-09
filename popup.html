@@ -1,32 +1,111 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>CP Sync</title>
     <link rel="stylesheet" href="popup.css">
 </head>
 
 <body>
 
-<h1>CP Sync</h1>
+<div class="container">
+    <header>
+        <h1>CP Sync</h1>
+        <span id="statusBadge" class="badge disconnected">
+            Not Connected
+        </span>
+    </header>
+    <section class="card">
+        <div class="field">
 
-<p id="status">
-Not Connected
-</p>
+            <label id="repositoryLabel" for="repository">
 
-<label id="repositoryLabel" for="repository">
-Repository
-</label>
+                Repository
 
-<select id="repository"></select>
+            </label>
 
-<button id="connect">
-Settings
-</button>
+            <select id="repository"></select>
 
-<button id="upload">
-Upload Current Solution
-</button>
+        </div>
+
+        <div class="field">
+
+            <label>
+
+                Status
+
+            </label>
+
+            <div id="status" class="statusBox">
+
+                Ready
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <section id="captureEditor" class="card capture-editor" hidden>
+        <div class="field">
+            <label for="captureTitle">Problem Title</label>
+            <input id="captureTitle" type="text">
+        </div>
+
+        <div class="field">
+            <label for="captureLanguage">Language</label>
+            <input id="captureLanguage" type="text">
+        </div>
+
+        <div class="field">
+            <label for="captureCode">Solution Code</label>
+            <textarea id="captureCode" rows="8"></textarea>
+        </div>
+
+        <div class="field">
+            <label for="captureNotes">Notes</label>
+            <textarea id="captureNotes" rows="4"></textarea>
+        </div>
+
+        <div class="field">
+            <label for="captureApproach">Approach</label>
+            <textarea id="captureApproach" rows="4"></textarea>
+        </div>
+
+        <div class="field">
+            <label for="captureComplexity">Complexity</label>
+            <input id="captureComplexity" type="text" placeholder="Time O(n), Space O(1)">
+        </div>
+
+        <div class="field">
+            <label for="captureEditorialUrl">Editorial URL</label>
+            <input id="captureEditorialUrl" type="url">
+        </div>
+
+        <button id="confirmCapture" type="button">Use This Capture</button>
+    </section>
+
+    <div class="buttons">
+
+        <button id="connect" class="secondary">
+
+            ⚙ Settings
+
+        </button>
+
+        <button id="upload">
+
+            ☁ Upload Solution
+
+        </button>
+
+    </div>
+
+</div>
+
+<div id="toastContainer"></div>
 
 <script type="module" src="popup.js"></script>
 

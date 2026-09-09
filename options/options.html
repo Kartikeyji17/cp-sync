@@ -2,59 +2,418 @@
 <html>
 
 <head>
+
     <meta charset="UTF-8">
+
     <title>CP Sync Settings</title>
+
     <link rel="stylesheet" href="options.css">
+
 </head>
 
 <body>
 
-    <main>
-        <h1>CP Sync Settings</h1>
+<div class="app">
 
-        <section>
-            <label for="token">GitHub Fine-grained Personal Access Token</label>
-            <input id="token" type="password" placeholder="github_pat_...">
+    <aside class="sidebar">
 
-            <button id="fetchRepos">Load Repositories</button>
-            <p id="repoStatus">Repositories have not been loaded in this session.</p>
-        </section>
+        <h1>CP Sync</h1>
 
-        <section>
-            <h2>Platform Repositories</h2>
-            <div id="repositoryTable" class="repository-table"></div>
-        </section>
+        <nav>
 
-        <section class="defaults-grid">
-            <div>
-                <label for="leetcodeDefaultRepo">LeetCode Default</label>
-                <select id="leetcodeDefaultRepo"></select>
+            <button class="nav-btn active" data-page="settings">
+                ⚙ Settings
+            </button>
+
+            <button class="nav-btn" data-page="dashboard">
+                📊 Dashboard
+            </button>
+
+            <button class="nav-btn" data-page="analytics">
+                📈 Analytics
+            </button>
+
+            <button class="nav-btn" data-page="history">
+                🕘 Recent Uploads
+            </button>
+
+        </nav>
+
+        <button id="save" class="save-btn">
+            Save Settings
+        </button>
+
+    </aside>
+
+    <main class="content">
+
+        <!-- ================= SETTINGS ================= -->
+
+        <section id="settings" class="page active">
+
+            <div class="card">
+
+                <h2>GitHub</h2>
+
+                <label for="token">
+                    GitHub Fine-grained Personal Access Token
+                </label>
+
+                <input
+                        id="token"
+                        type="password"
+                        placeholder="github_pat_..."
+                >
+
+                <button id="fetchRepos">
+                    Load Repositories
+                </button>
+
+                <p id="repoStatus">
+                    Repositories have not been loaded in this session.
+                </p>
+
+                <div class="backup-actions">
+                    <button id="exportBackup" type="button">Export Backup</button>
+                    <button id="importBackup" type="button">Import Backup</button>
+                    <input id="backupFile" type="file" accept="application/json,.json" hidden>
+                </div>
+
+                <button id="clearLocalData" class="danger-button" type="button">Clear Local Data</button>
+
             </div>
 
-            <div>
-                <label for="codeforcesDefaultRepo">Codeforces Default</label>
-                <select id="codeforcesDefaultRepo"></select>
+            <div class="card">
+
+                <h2>Platform Repositories</h2>
+
+                <div
+                        id="repositoryTable"
+                        class="repository-table"
+                ></div>
+
             </div>
 
-            <div>
-                <label for="codechefDefaultRepo">CodeChef Default</label>
-                <select id="codechefDefaultRepo"></select>
+            <div class="card">
+
+                <h2>Default Repository</h2>
+
+                <div class="defaults-grid">
+
+                    <div>
+
+                        <label for="leetcodeDefaultRepo">
+                            LeetCode
+                        </label>
+
+                        <select id="leetcodeDefaultRepo"></select>
+
+                    </div>
+
+                    <div>
+
+                        <label for="codeforcesDefaultRepo">
+                            Codeforces
+                        </label>
+
+                        <select id="codeforcesDefaultRepo"></select>
+
+                    </div>
+
+                    <div>
+
+                        <label for="codechefDefaultRepo">
+                            CodeChef
+                        </label>
+
+                        <select id="codechefDefaultRepo"></select>
+
+                    </div>
+
+                </div>
+
             </div>
+
+            <div class="card">
+
+                <h2>Upload</h2>
+
+                <label for="autoUploadMode">
+                    Upload Mode
+                </label>
+
+                <select id="autoUploadMode">
+
+                    <option value="manual">
+                        Manual
+                    </option>
+
+                    <option value="ask">
+                        Ask after Accepted
+                    </option>
+
+                    <option value="auto">
+                        Auto Upload
+                    </option>
+
+                </select>
+
+                <label for="organizeBy">
+                    Organize Solutions By
+                </label>
+
+                <select id="organizeBy">
+                    <option value="platform">Platform</option>
+                    <option value="difficulty">Difficulty</option>
+                    <option value="topic">Topic</option>
+                    <option value="platform-difficulty">Platform and difficulty</option>
+                    <option value="platform-topic">Platform and topic</option>
+                    <option value="platform-topic-difficulty">Platform, topic, and difficulty</option>
+                </select>
+
+                <label for="repoVisibility">
+                    New Repository Visibility
+                </label>
+
+                <select id="repoVisibility">
+                    <option value="private">Private</option>
+                    <option value="public">Public</option>
+                </select>
+
+            </div>
+
+            <div class="card">
+
+                <h2>Platform Capture</h2>
+
+                <div id="platformCapabilities" class="capability-list"></div>
+
+            </div>
+
         </section>
 
-        <section>
-            <label for="autoUploadMode">Upload Mode</label>
-            <select id="autoUploadMode">
-                <option value="manual">Manual</option>
-                <option value="ask">Ask after Accepted</option>
-                <option value="auto">Auto Upload</option>
-            </select>
+        <!-- ================= DASHBOARD ================= -->
+
+        <section id="dashboard" class="page">
+
+            <h2>Dashboard</h2>
+
+            <div class="stats-grid">
+
+                <div class="card">
+                    <h3>Total Solved</h3>
+                    <p id="totalSolved">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Easy</h3>
+                    <p id="easySolved">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Medium</h3>
+                    <p id="mediumSolved">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Hard</h3>
+                    <p id="hardSolved">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Contest</h3>
+                    <p id="contestSolved">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Failed Attempts</h3>
+                    <p id="failedAttempts">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Current Streak</h3>
+                    <p id="currentStreak">0</p>
+                </div>
+
+                <div class="card">
+                    <h3>Longest Streak</h3>
+                    <p id="longestStreak">0</p>
+                </div>
+
+            </div>
+
+            <div class="card review-card">
+                <h2>Review Queue</h2>
+                <div id="reviewQueue" class="review-queue"></div>
+            </div>
+
+            <div class="card">
+                <h2>Weak Topics</h2>
+                <div id="weakTopics" class="weak-topics"></div>
+            </div>
+
+            <div class="card">
+                <h2>Redo Queue</h2>
+                <div id="redoQueue" class="redo-queue"></div>
+            </div>
+
         </section>
 
-        <button id="save">Save Settings</button>
+        <!-- ================= ANALYTICS ================= -->
+
+        <section id="analytics" class="page">
+
+            <div class="card">
+
+                <h2>Platform Usage</h2>
+
+                <canvas
+                        id="platformChart"
+                        width="700"
+                        height="250"
+                ></canvas>
+
+            </div>
+
+            <div class="card">
+
+                <h2>Language Usage</h2>
+
+                <canvas
+                        id="languageChart"
+                        width="700"
+                        height="250"
+                ></canvas>
+
+            </div>
+
+            <div class="card">
+
+                <h2>Difficulty Distribution</h2>
+
+                <canvas
+                        id="difficultyChart"
+                        width="700"
+                        height="250"
+                ></canvas>
+
+            </div>
+
+        </section>
+
+        <!-- ================= HISTORY ================= -->
+
+        <section id="history" class="page">
+
+            <div class="card">
+
+                <h2>Recent Uploads</h2>
+
+                <input id="historySearch" type="search" placeholder="Search uploaded problems">
+
+                <table id="recentUploads">
+
+                    <thead>
+
+                    <tr>
+
+                        <th>Problem</th>
+
+                        <th>Platform</th>
+
+                        <th>Language</th>
+
+                        <th>Difficulty</th>
+
+                        <th>Date</th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody></tbody>
+
+                </table>
+
+            </div>
+
+            <div class="card">
+
+                <h2>Failed Attempts</h2>
+
+                <table id="attemptHistory">
+                    <thead>
+                    <tr>
+                        <th>Problem</th>
+                        <th>Platform</th>
+                        <th>Language</th>
+                        <th>Captured</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+            </div>
+
+            <div class="card">
+
+                <h2>Upload Jobs</h2>
+
+                <div class="job-filters">
+
+                    <input id="jobSearch" type="search" placeholder="Search problems or repositories">
+
+                    <select id="jobStateFilter">
+                        <option value="all">All statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="uploading">Uploading</option>
+                        <option value="retrying">Retrying</option>
+                        <option value="succeeded">Succeeded</option>
+                        <option value="skipped">Skipped</option>
+                        <option value="conflict">Conflict</option>
+                        <option value="failed">Failed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+
+                </div>
+
+                <table id="uploadJobs">
+
+                    <thead>
+
+                    <tr>
+
+                        <th>Problem</th>
+
+                        <th>Repository</th>
+
+                        <th>Status</th>
+
+                        <th>Attempts</th>
+
+                        <th>Commits</th>
+
+                        <th>Updated</th>
+
+                        <th>Action</th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody></tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
     </main>
 
-    <script type="module" src="options.js"></script>
+</div>
+
+<script type="module" src="options.js"></script>
 
 </body>
 
