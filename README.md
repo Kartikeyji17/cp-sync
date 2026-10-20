@@ -4,14 +4,32 @@ CP Sync is a local-first Chrome extension for capturing competitive-programming 
 
 It combines solution capture, repository organization, reliable GitHub uploads, failed-attempt tracking, spaced review, weak-topic analysis, and a redo queue. It is designed to be useful without a backend, paid hosting, or a cloud database.
 
+[![Download latest release](https://img.shields.io/github/v/release/Kartikeyji17/cp-sync?label=Download%20latest%20release)](https://github.com/Kartikeyji17/cp-sync/releases/latest)
+[![Checks](https://github.com/Kartikeyji17/cp-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/Kartikeyji17/cp-sync/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/Kartikeyji17/cp-sync)](LICENSE)
+
+> **[Download CP Sync](https://github.com/Kartikeyji17/cp-sync/releases/latest)** · Extract the ZIP · Load the extracted folder at `chrome://extensions`
+
+## Quick Start
+
+1. **[Download the latest release](https://github.com/Kartikeyji17/cp-sync/releases/latest)** and extract the ZIP.
+2. Open `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**.
+3. Select the extracted CP Sync folder containing `manifest.json`.
+4. Open **Options**, create a GitHub fine-grained token with access only to the repository where solutions should be stored, and save it.
+5. Load repositories, assign one to each platform, and start with **Manual** upload mode.
+
+CP Sync sends solutions directly from your browser to GitHub. It does not use a CP Sync server. Your token stays in Chrome local storage, so never share it or upload an exported backup file.
+
 ## Contents
 
 - [Why CP Sync Exists](#why-cp-sync-exists)
 - [What It Does](#what-it-does)
+- [Quick Start](#quick-start)
 - [Architecture](#architecture)
 - [End-to-End Flow](#end-to-end-flow)
 - [Supported Platforms](#supported-platforms)
 - [Installation](#installation)
+- [Releasing](#releasing)
 - [First-Time Setup](#first-time-setup)
 - [Upload Modes](#upload-modes)
 - [Capture and Correction](#capture-and-correction)
@@ -223,18 +241,50 @@ All platform parsers depend on page DOMs that can change without notice. Parser 
 
 ## Installation
 
-CP Sync currently has no build step.
+### Download a release (recommended)
 
-1. Clone or download this repository.
+1. Open the repository's [Releases](https://github.com/Kartikeyji17/cp-sync/releases) page.
+2. Download the `cp-sync-vX.Y.Z.zip` asset from the latest release.
+3. Extract the ZIP to a permanent folder. Do not load the ZIP itself.
+4. Open `chrome://extensions` in Chrome or `edge://extensions` in Edge.
+5. Enable **Developer mode**.
+6. Select **Load unpacked** and choose the extracted folder containing `manifest.json`.
+7. Open the CP Sync extension Options page and complete [First-Time Setup](#first-time-setup).
+
+The packaged release contains only the files required to run the extension. It does not contain tests, Git history, local settings, or anyone else's GitHub token.
+
+### Install directly from the repository
+
+Use this when testing a branch or contributing:
+
+1. Clone or download the repository.
 2. Open `chrome://extensions` in Chrome.
 3. Enable **Developer mode**.
 4. Select **Load unpacked**.
 5. Choose the repository folder containing `manifest.json`.
 6. Open the CP Sync extension Options page.
 7. Configure GitHub access and repository assignments.
-8. Open a supported problem page and test a manual capture first.
 
 The extension currently targets Chrome Manifest V3 behavior. Edge and Firefox compatibility have not been formally validated.
+
+## Releasing
+
+The extension version is stored in both `manifest.json` and `package.json`; they must match.
+Run the local checks and create a clean distributable ZIP with:
+
+```bash
+npm run verify
+```
+
+The ZIP is written to `dist/cp-sync-vX.Y.Z.zip`. The `dist/` directory is ignored by Git.
+To publish a release, update both version fields, commit the change, and push a matching semantic-version tag:
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+GitHub Actions validates the extension and attaches the ZIP to a generated GitHub Release.
 
 ## First-Time Setup
 

@@ -22,3 +22,11 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Build release package
+        run: npm run package
+
+      - name: Verify release package
+        shell: bash
+        run: |
+          test -f "dist/cp-sync-v$(node -p "require('./manifest.json').version").zip"

@@ -1,10 +1,22 @@
 {
   "name": "cp-sync",
+  "version": "1.0.0",
+  "description": "A local-first Chrome extension for syncing competitive-programming solutions to GitHub.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kartikeyji17/cp-sync.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Kartikeyji17/cp-sync/issues"
+  },
+  "homepage": "https://github.com/Kartikeyji17/cp-sync#readme",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test",
     "check": "node scripts/check-syntax.mjs",
-    "verify": "npm run check && npm test"
+    "package": "node scripts/package-release.mjs",
+    "verify": "npm run check && npm test && npm run package"
   }
 }
